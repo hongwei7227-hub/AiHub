@@ -18,6 +18,7 @@ spring:
           model: ${SPRING_AI_OPENAI_CHAT_MODEL:Qwen/Qwen2.5-7B-Instruct}
           temperature: ${SPRING_AI_OPENAI_CHAT_TEMPERATURE:0.3}
       embedding:
+        base-url: ${SPRING_AI_OPENAI_EMBEDDING_BASE_URL:https://api.siliconflow.cn}
         options:
           model: ${SPRING_AI_OPENAI_EMBEDDING_MODEL:BAAI/bge-m3}
     vectorstore:
@@ -109,3 +110,16 @@ ai:
 # Caffeine 本地缓存开关（true=启用二级缓存，false=退回纯 Redis 模式）
 caffeine:
   enabled: true
+
+# ===== RAG 评估框架（Plan B）=====
+rag:
+  ingest:
+    data-dir: F:/project/hm-dianping-data-prep/output
+    batch-size: 100
+    embedding-retry: 3
+  eval:
+    output-dir: ./docs
+    thresholds: 0.5,0.6,0.65,0.7
+    top-k-list: 3,5,10
+    max-top-k: 10
+    failure-case-limit: 8

@@ -23,6 +23,17 @@ public final class AiMetadataConstants {
     public static final String DOC_TYPE_SHOP_PROFILE = "shop_profile";
     public static final String DOC_TYPE_BLOG_REVIEW = "blog_review";
 
+    // ===== Plan B 新增：JSONL 灌库需要的额外 metadata 字段 =====
+    public static final String CITY = "city";
+    public static final String CATEGORY = "category";
+    public static final String ENRICHMENT_SOURCE = "enrichmentSource";
+    public static final String REVIEW_ID = "reviewId";
+    public static final String QA_ID = "qaId";
+    public static final String TOPIC = "topic";
+    public static final String RATING_FLAVOR = "ratingFlavor";
+    public static final String RATING_ENV = "ratingEnv";
+    public static final String RATING_SERVICE = "ratingService";
+
     private AiMetadataConstants() {
     }
 }
