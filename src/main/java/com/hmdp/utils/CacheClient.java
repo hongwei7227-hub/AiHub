@@ -5,6 +5,8 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.github.benmanes.caffeine.cache.Cache;
+import com.hmdp.cache.broadcast.BroadcastChannel;
+import com.hmdp.cache.broadcast.InvalidateMsg;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -25,15 +27,26 @@ public class CacheClient {
 
     private final StringRedisTemplate stringRedisTemplate;
     private final Cache<String, Object> caffeineCache;
+    private final BroadcastChannel broadcastChannel;
 
     @Value("${caffeine.enabled:false}")
     private boolean enableCaffeineCache;
 
+    /**
+     * 集群失效广播开关，独立于 caffeine.enabled。
+     * 出问题时可以只关广播保留 Caffeine 命中收益，降级粒度更细。
+     */
+    @Value("${cache.broadcast.enabled:false}")
+    private boolean broadcastEnabled;
+
     private static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
 
-    public CacheClient(StringRedisTemplate stringRedisTemplate, Cache<String, Object> caffeineCache) {
+    public CacheClient(StringRedisTemplate stringRedisTemplate,
+                       Cache<String, Object> caffeineCache,
+                       BroadcastChannel broadcastChannel) {
         this.stringRedisTemplate = stringRedisTemplate;
         this.caffeineCache = caffeineCache;
+        this.broadcastChannel = broadcastChannel;
     }
 
     public void set(String key, Object value, Long time, TimeUnit unit) {
@@ -48,6 +61,29 @@ public class CacheClient {
             caffeineCache.invalidate(key);
         }
         stringRedisTemplate.delete(key);
+        if (broadcastEnabled) {
+            try {
+                broadcastChannel.publish(InvalidateMsg.of(key));
+            } catch (Exception e) {
+                log.warn("broadcast invalidate failed, fallback to TTL, key={}", key, e);
+            }
+        }
+    }
+
+    /**
+     * 给集群广播消费端用的入口：只清自己这台节点的 Caffeine，不再二次广播。
+     *
+     * 失败默认吞异常——invalidate 是"提示型"消息，业务价值密度低，
+     * 失败有 expireAfterWrite 兜底，不能用业务消息标准触发 MQ 重试。
+     */
+    public void invalidateLocalOnly(String key) {
+        try {
+            if (enableCaffeineCache) {
+                caffeineCache.invalidate(key);
+            }
+        } catch (Exception e) {
+            log.warn("invalidateLocalOnly failed, fallback to TTL, key={}", key, e);
+        }
     }
 
     public void setWithLogicalExpire(String key, Object value, Long time, TimeUnit unit) {
