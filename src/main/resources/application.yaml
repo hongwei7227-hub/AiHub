@@ -109,9 +109,3 @@ ai:
 # Caffeine 本地缓存开关（true=启用二级缓存，false=退回纯 Redis 模式）
 caffeine:
   enabled: true
-
-# 集群失效广播开关（独立于 caffeine.enabled，单机部署保持 false）
-# 上集群时切到 true，并把 BroadcastChannel 替换为 RocketMQ / Redis Pub/Sub 实现
-cache:
-  broadcast:
-    enabled: false
