@@ -99,16 +99,14 @@ ai:
         knowledge: knowledge_vector
         shop-profile: shop_profile_vector
         blog-review: blog_review_vector
-    # Plan: 和风天气真实 API。默认 enabled=false，业务启动不强求；application-local.yaml 启用并填真实值。
-    # 私钥 PEM 路径必须本地绝对路径，绝不进 git。
+    # Plan: 和风天气真实 API（API KEY 鉴权模式）。
+    # 默认 enabled=false 业务启动不强求；application-local.yaml 启用并填真实值。
+    # 鉴权方式：URL 拼 ?key=<apiKey>，无需 JWT/PEM。
     qweather:
       enabled: ${QWEATHER_ENABLED:false}
       api-host: ${QWEATHER_API_HOST:}
-      project-id: ${QWEATHER_PROJECT_ID:}
-      credential-id: ${QWEATHER_KID:}
-      private-key-path: ${QWEATHER_PRIVATE_KEY_PATH:}
+      api-key: ${QWEATHER_API_KEY:}
       timeout-millis: ${QWEATHER_TIMEOUT_MILLIS:3000}
-      jwt-ttl-seconds: 600
 
 # Caffeine 本地缓存开关（true=启用二级缓存，false=退回纯 Redis 模式）
 caffeine:
