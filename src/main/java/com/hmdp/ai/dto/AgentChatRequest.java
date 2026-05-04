@@ -14,4 +14,6 @@ public class AgentChatRequest {
     private Double x;
 
     private Double y;
+
+    private Long shopId;
 }

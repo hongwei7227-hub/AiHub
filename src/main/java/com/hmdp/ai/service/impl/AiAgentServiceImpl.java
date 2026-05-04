@@ -82,7 +82,8 @@ public class AiAgentServiceImpl implements AiAgentService {
                 chatMessage.getId(),
                 chatMessage.getContent(),
                 request.getX(),
-                request.getY()
+                request.getY(),
+                request.getShopId()
         ));
         return CreateChatMessageResponse.builder()
                 .conversationId(conversation.getId())
@@ -172,3 +173,4 @@ public class AiAgentServiceImpl implements AiAgentService {
         return "抱歉，当前多轮推理没有产生可用结果，请稍后重试。";
     }
 }
+=

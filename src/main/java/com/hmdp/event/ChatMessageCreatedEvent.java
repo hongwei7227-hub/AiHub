@@ -18,4 +18,6 @@ public class ChatMessageCreatedEvent {
     private final Double x;
 
     private final Double y;
+
+    private final Long shopId;
 }
