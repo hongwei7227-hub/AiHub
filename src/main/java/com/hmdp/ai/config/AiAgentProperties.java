@@ -72,19 +72,20 @@ public class AiAgentProperties {
     }
 
     /**
-     * Plan: 和风天气 API 接入配置。
-     * 私钥 PEM 路径 + Ed25519 JWT 鉴权所需 (kid, sub)；签发 TTL 短可控（默认 600s 每次签）。
+     * Plan: 和风天气 API 接入配置（API KEY 鉴权模式）。
+     *
+     * <p>QWeather 控制台支持两种凭据：JWT(Ed25519) 或 API KEY。本项目选 API KEY，
+     * 一来代码量小（不需 PEM 私钥 + JWT 签名），二来 Agent 内部用足够。
+     *
+     * <p>鉴权方式：直接给请求 URL 拼 {@code ?key=<apiKey>} 即可。
      * 默认 enabled=false，业务启动不要求配置；application-local.yaml 里启用并填真实值。
      */
     @Data
     public static class QWeather {
         private boolean enabled = false;
         private String apiHost;
-        private String projectId;
-        private String credentialId;
-        private String privateKeyPath;
+        private String apiKey;
         private int timeoutMillis = 3000;
-        private long jwtTtlSeconds = 600;
     }
 
     @Data
