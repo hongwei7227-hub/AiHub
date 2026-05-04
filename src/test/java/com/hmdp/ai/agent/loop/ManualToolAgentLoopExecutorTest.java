@@ -34,11 +34,10 @@ class ManualToolAgentLoopExecutorTest {
                 if (callCount.incrementAndGet() == 1) {
                     return new ChatResponse(List.of(new Generation(new AssistantMessage(""))));
                 }
-                return new ChatResponse(List.of(new Generation(new AssistantMessage(
-                        "",
-                        java.util.Map.of(),
-                        List.of(new AssistantMessage.ToolCall("call-2", "function", "terminate", "{\"answer\":\"重试后成功\",\"reason\":\"补充约束后模型正常结束\"}"))
-                ))));
+                return new ChatResponse(List.of(new Generation(AssistantMessage.builder()
+                        .content("")
+                        .toolCalls(List.of(new AssistantMessage.ToolCall("call-2", "function", "terminate", "{\"answer\":\"重试后成功\",\"reason\":\"补充约束后模型正常结束\"}")))
+                        .build())));
             }
         };
 
@@ -71,17 +70,15 @@ class ManualToolAgentLoopExecutorTest {
             @Override
             public ChatResponse call(Prompt prompt) {
                 if (callCount.incrementAndGet() == 1) {
-                    return new ChatResponse(List.of(new Generation(new AssistantMessage(
-                            "",
-                            java.util.Map.of(),
-                            List.of(new AssistantMessage.ToolCall("call-1", "function", "echo", "{\"text\":\"hello\"}"))
-                    ))));
+                    return new ChatResponse(List.of(new Generation(AssistantMessage.builder()
+                            .content("")
+                            .toolCalls(List.of(new AssistantMessage.ToolCall("call-1", "function", "echo", "{\"text\":\"hello\"}")))
+                            .build())));
                 }
-                return new ChatResponse(List.of(new Generation(new AssistantMessage(
-                        "",
-                        java.util.Map.of(),
-                        List.of(new AssistantMessage.ToolCall("call-2", "function", "terminate", "{\"answer\":\"最终答案\",\"reason\":\"信息已经足够\"}"))
-                ))));
+                return new ChatResponse(List.of(new Generation(AssistantMessage.builder()
+                        .content("")
+                        .toolCalls(List.of(new AssistantMessage.ToolCall("call-2", "function", "terminate", "{\"answer\":\"最终答案\",\"reason\":\"信息已经足够\"}")))
+                        .build())));
             }
         };
 
@@ -116,11 +113,10 @@ class ManualToolAgentLoopExecutorTest {
         ChatModel chatModel = new ChatModel() {
             @Override
             public ChatResponse call(Prompt prompt) {
-                return new ChatResponse(List.of(new Generation(new AssistantMessage(
-                        "",
-                        java.util.Map.of(),
-                        List.of(new AssistantMessage.ToolCall("call-loop", "function", "echo", "{\"text\":\"loop\"}"))
-                ))));
+                return new ChatResponse(List.of(new Generation(AssistantMessage.builder()
+                        .content("")
+                        .toolCalls(List.of(new AssistantMessage.ToolCall("call-loop", "function", "echo", "{\"text\":\"loop\"}")))
+                        .build())));
             }
         };
 
