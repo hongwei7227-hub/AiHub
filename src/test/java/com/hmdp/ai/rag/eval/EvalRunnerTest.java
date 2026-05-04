@@ -90,6 +90,11 @@ class EvalRunnerTest {
         // 8. 写 Markdown 报告（含 baseline + LLM-judge 双指标）
         long totalElapsed = elapsed + ljElapsed;
         Path reportPath = reportWriter.write(Path.of(outputDir), report, filterExp, failures, queries.size(), totalElapsed);
+
+        // 8.5 dump 每条 query 的 LLM-judge 详情（含 reason），UTF-8 JSON，方便 audit / 抽样
+        String dateStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+        Path detailsPath = llmJudgeEvaluator.dumpDetailsJson(Path.of(outputDir), dateStr);
+        log.info("[eval] 📋 LLM-judge 详情 (含 reason) 写到: {}", detailsPath);
         log.info("[eval] ✅ report written: {}", reportPath);
         log.info("[eval] 📋 NEXT STEP: 人工补完 failure case 报告里的'根因/改进方向'两栏，再 commit");
     }
