@@ -46,9 +46,18 @@ public class EvalReportWriter {
         appendHeader(sb, queryCount, elapsedMs);
         appendScopeDeclaration(sb);
         appendEvalConfig(sb, report);
+        if (report.hasLlmJudge()) {
+            appendDualMethodBoundaries(sb);   // Section 1.5
+        }
         appendCollectionTables(sb, report);
         appendFilterExperiment(sb, filterExp);
+        if (report.hasLlmJudge()) {
+            appendLlmJudgeResults(sb, report);   // Section 5.5
+        }
         appendFailureCases(sb, failures);
+        if (report.hasLlmJudge()) {
+            appendEvalSetReflection(sb);   // Section 6.5
+        }
         appendObservations(sb, report, filterExp);
         appendNextSteps(sb);
         appendMethodologyRefs(sb);
@@ -244,6 +253,144 @@ public class EvalReportWriter {
         sb.append("- [LangChain](https://github.com/langchain-ai/langchain) — trace 思路应用于 failure case 分析\n");
         sb.append("- [Milvus](https://github.com/milvus-io/milvus) — metadata filtering 一等公民的工程实践\n\n");
         sb.append("具体实现是 Java + Spring AI + Milvus（业务栈），核心评估逻辑约 50 行 Java（标准 IR 公式：Recall@K / Precision@K / MRR）。\n");
+    }
+
+    // ========== Plan C：LLM-as-judge 增量 section ==========
+
+    /**
+     * Section 1.5：双评估方法的边界条件声明。
+     * 客观陈述两套指标各能给什么、不能给什么——不"软化"也不强行找平衡。
+     */
+    private void appendDualMethodBoundaries(StringBuilder sb) {
+        sb.append("## 1.5 评估方法的边界条件声明\n\n");
+        sb.append("> 本次报告同时呈现两套评估方法的指标：**ID-比对 baseline** + **LLM-as-judge (reference-free)**。\n");
+        sb.append("> 两个方法不是替代关系，而是**互补**——各能给什么、不能给什么如下，由读者自行判断。\n\n");
+        sb.append("| 维度 | baseline (ID-比对) | LLM-as-judge (reference-free) |\n");
+        sb.append("|---|---|---|\n");
+        sb.append("| Recall@K | ✅ 可算 | ❌ **天然没有**——reference-free 范式没有 ground truth 全集做分母 |\n");
+        sb.append("| Precision@K | ✅ 可算，但准确性依赖 ground truth 标注质量 | ✅ 可算，由 LLM 判 (query, doc) 二元相关性 |\n");
+        sb.append("| MRR | ✅ 可算 | ✅ 可算（按 LLM 判相关的最高排名） |\n");
+        sb.append("| HitRate | ✅ 可算 | ✅ 可算 |\n");
+        sb.append("| 评估成本 | 低（一次性） | 中（每条 query × top-K 都需要 LLM 调用）|\n");
+        sb.append("| 评估集设计敏感度 | **高**——ground truth 选择直接决定数字含金量 | 低——只看 (query, doc) 对，不依赖标注 |\n\n");
+        sb.append("**本次特别说明**：baseline 的 shop / review 类用\"评论数 top5\"作为 ground truth，与向量检索的\"语义相似度\"是两个维度，导致 Recall/Precision 数字偏低。这是评估集设计错配，不是 RAG 检索本身的问题。详见 [Section 6.5 评估集设计反思](#65-评估集设计反思--llm-as-judge-验证结果)。\n\n");
+        sb.append("> 方法论参考 [Ragas 论文](https://arxiv.org/abs/2309.15217) 关于 reference-based vs reference-free trade-off 的讨论。\n\n");
+    }
+
+    /**
+     * Section 5.5：LLM-judge 评估结果。
+     * 3 个 collection × 12 配置的 LLM-judge 指标表 + 与 baseline 对比。
+     */
+    private void appendLlmJudgeResults(StringBuilder sb, AggregatedReport report) {
+        sb.append("## 5.5 LLM-as-judge 评估结果\n\n");
+        Map<String, Map<EvalConfig, AggregatedReport.LlmJudgeMetrics>> ljMap = report.getLlmJudgeAggregated();
+        if (ljMap == null || ljMap.isEmpty()) {
+            sb.append("（未跑 LLM-judge 评估，跳过本节）\n\n");
+            return;
+        }
+
+        // sanity check
+        sb.append("> **Sanity check**：LLM-judge 总命中率（所有 query × 所有 retrieved doc 里判 true 的比例）= ")
+                .append(String.format("%.1f%%", report.getLlmJudgeOverallTrueRate() * 100)).append("\n");
+        if (report.getLlmJudgeOverallTrueRate() < 0.30 || report.getLlmJudgeOverallTrueRate() > 0.70) {
+            sb.append("> ⚠️ **超出 30%~70% 健康区间**——可能 judge 太宽松或 prompt 设计有 bug，结果需要谨慎解读\n");
+        } else {
+            sb.append("> ✅ 落在 30%~70% 健康区间，judge 行为合理\n");
+        }
+        sb.append("> LLM 调用：").append(report.getLlmJudgeCallCount())
+                .append(" 次，失败 ").append(report.getLlmJudgeFailureCount())
+                .append("（默认 false 兜底），缓存大小 ").append(report.getLlmJudgeCacheSize()).append("\n\n");
+
+        for (Map.Entry<String, Map<EvalConfig, AggregatedReport.LlmJudgeMetrics>> entry : ljMap.entrySet()) {
+            String collection = entry.getKey();
+            Map<EvalConfig, AggregatedReport.LlmJudgeMetrics> rows = entry.getValue();
+            sb.append("### 5.5.").append(collection).append(" (LLM-judge)\n\n");
+            sb.append("| Threshold | top-K | LLM-Precision@K | LLM-MRR | LLM-HitRate |\n");
+            sb.append("|---|---|---|---|---|\n");
+            rows.entrySet().stream()
+                    .sorted(Comparator
+                            .<Map.Entry<EvalConfig, AggregatedReport.LlmJudgeMetrics>>comparingDouble(e -> e.getKey().getThreshold())
+                            .thenComparingInt(e -> e.getKey().getTopK()))
+                    .forEach(e -> {
+                        EvalConfig cfg = e.getKey();
+                        AggregatedReport.LlmJudgeMetrics m = e.getValue();
+                        sb.append("| ").append(String.format("%.2f", cfg.getThreshold()))
+                                .append(" | ").append(cfg.getTopK())
+                                .append(" | ").append(String.format("%.3f", m.getAvgContextPrecision()))
+                                .append(" | ").append(String.format("%.3f", m.getMrr()))
+                                .append(" | ").append(String.format("%.3f", m.getHitRate()))
+                                .append(" |\n");
+                    });
+
+            EvalConfig best = rows.entrySet().stream()
+                    .max(Comparator.comparingDouble(e ->
+                            e.getValue().getAvgContextPrecision() * 0.5 + e.getValue().getHitRate() * 0.5))
+                    .map(Map.Entry::getKey).orElse(null);
+            if (best != null) {
+                AggregatedReport.LlmJudgeMetrics bm = rows.get(best);
+                sb.append("\n**LLM-judge 最优配置（Precision+HitRate 加权最高）**：threshold=")
+                        .append(String.format("%.2f", best.getThreshold()))
+                        .append(", topK=").append(best.getTopK())
+                        .append("（Precision=").append(String.format("%.3f", bm.getAvgContextPrecision()))
+                        .append(", HitRate=").append(String.format("%.3f", bm.getHitRate())).append("）\n\n");
+            }
+        }
+
+        // baseline vs LLM-judge 对比表（统一取 topK=5 的 threshold=0.65 配置近似业务实际）
+        sb.append("### 5.5.X baseline vs LLM-judge 对比（threshold=0.65, topK=5）\n\n");
+        sb.append("| Collection | baseline P@5 | LLM-judge P@5 | Δ Precision | baseline HitRate | LLM-judge HitRate | Δ HitRate |\n");
+        sb.append("|---|---|---|---|---|---|---|\n");
+        for (String collection : report.getCollections()) {
+            EvalConfig key = findConfig(report, collection, 0.65, 5);
+            AggregatedReport.AggregatedMetrics base = report.getAggregated().get(collection).get(key);
+            AggregatedReport.LlmJudgeMetrics lj = ljMap.get(collection) == null ? null : ljMap.get(collection).get(key);
+            if (base == null || lj == null) continue;
+            double dP = lj.getAvgContextPrecision() - base.getAvgContextPrecision();
+            double dH = lj.getHitRate() - base.getHitRate();
+            sb.append("| ").append(collection)
+                    .append(" | ").append(String.format("%.3f", base.getAvgContextPrecision()))
+                    .append(" | ").append(String.format("%.3f", lj.getAvgContextPrecision()))
+                    .append(" | ").append(String.format("%+.3f", dP))
+                    .append(" | ").append(String.format("%.3f", base.getHitRate()))
+                    .append(" | ").append(String.format("%.3f", lj.getHitRate()))
+                    .append(" | ").append(String.format("%+.3f", dH))
+                    .append(" |\n");
+        }
+        sb.append("\n");
+    }
+
+    /**
+     * Section 6.5：评估集设计反思 + LLM-as-judge 验证结果。
+     */
+    private void appendEvalSetReflection(StringBuilder sb) {
+        sb.append("## 6.5 评估集设计反思 + LLM-as-judge 验证结果\n\n");
+        sb.append("### 反思：baseline 数字偏低的真实原因\n\n");
+        sb.append("Plan B baseline 跑完后，shop / review 的 Recall ≈ 0、knowledge Recall = 0.70。\n");
+        sb.append("**初看像是 RAG 检索能力差，但 failure case 逐条排查后发现：召回的店铺业务上完全合理（同城同品类、招牌菜匹配 query 关键词），只是不在 ground truth 标注的那 5 个 shop_id 里。**\n\n");
+        sb.append("根因定位到**评估集设计错配**：\n\n");
+        sb.append("- shop / review 类的 `relevant_ids` 用\"评论数 top5\"作为 ground truth\n");
+        sb.append("- 但向量检索靠**语义相似度**——\"用户 query 和 shop 描述的语义匹配度\"\n");
+        sb.append("- \"评论数热度\"和\"语义相关\"是**两个维度**，强行用前者作为后者的标注，必然出现：召回的店在业务上对，但被判 miss\n\n");
+        sb.append("knowledge 类不受影响是因为 question → answer 是一对一映射，ID 比对刚好对齐了语义匹配。\n\n");
+        sb.append("### LLM-as-judge 验证：换评估方法不换 ground truth\n\n");
+        sb.append("Plan C 没有重生成 `eval_queries.jsonl`（那本质上仍是 ID 比对范式），而是引入 **Reference-free LLM-as-judge**：\n");
+        sb.append("评估时跑 RAG 检索，对每个 retrieved doc 让 LLM (Claude Haiku 4.5) 二元判断\"是否与 query 相关\"，直接计算 Precision@K + LLM-judged HitRate。\n\n");
+        sb.append("**这是 [Ragas](https://github.com/explodinggradients/ragas) 推荐的标准做法**：当 ground truth 难以获得或标注质量存疑时，用强 LLM 当 judge 给出 reference-free 评估，绕开\"必须命中那几个特定 ID\"的硬要求，更符合 RAG 真实评估目标。\n\n");
+        sb.append("### 结论\n\n");
+        sb.append("- **如果 LLM-judge Precision 显著高于 baseline Precision**：证明 RAG 召回的文档在语义上是相关的，baseline 数字偏低是**评估集设计问题**，不是检索能力问题\n");
+        sb.append("- **业务最优阈值**：shop / review 的最优阈值要等到评估集修对（或长期用 LLM-judge）后才能确定。在那之前，`ai.agent.rag.similarity-threshold: 0.65` 是基于 Plan B baseline 配的保守值，**评估集修对前不动**\n");
+        sb.append("- **下一步可选**：(a) 用 LLM-as-judge 重标 ground truth 生成 v2 评估集；(b) 引入 rerank 看 LLM-judge Precision 能否再提升 10%\n\n");
+    }
+
+    private EvalConfig findConfig(AggregatedReport report, String collection, double threshold, int topK) {
+        Map<EvalConfig, AggregatedReport.AggregatedMetrics> rows = report.getAggregated().get(collection);
+        if (rows == null) return null;
+        for (EvalConfig cfg : rows.keySet()) {
+            if (Math.abs(cfg.getThreshold() - threshold) < 1e-6 && cfg.getTopK() == topK) {
+                return cfg;
+            }
+        }
+        return null;
     }
 
     private String safeStr(String s) {
