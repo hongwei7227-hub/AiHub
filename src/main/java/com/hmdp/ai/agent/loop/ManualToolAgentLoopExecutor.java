@@ -145,7 +145,8 @@ public class ManualToolAgentLoopExecutor {
             }
 
             if (!toolResponses.isEmpty()) {
-                messages.add(new ToolResponseMessage(toolResponses));
+                // Spring AI 1.1.x 起 ToolResponseMessage 直接构造器变 protected，必须走 builder
+                messages.add(ToolResponseMessage.builder().responses(toolResponses).build());
                 if (simpleRecommendationRequest && !terminateNudgeSent) {
                     messages.add(new UserMessage(promptProvider.simpleRecommendationFinishPrompt(request)));
                     terminateNudgeSent = true;

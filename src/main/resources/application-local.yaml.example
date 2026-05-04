@@ -20,8 +20,15 @@ spring:
     mcp:
       client:
         enabled: true
-        sse:
+        type: SYNC
+        request-timeout: 30s
+        # spring-ai 1.1.x 起原生支持 streamable-http；URL 不带 query string，
+        # 通过 McpSyncHttpClientRequestCustomizer @Bean 注入 Authorization Bearer header
+        streamable-http:
           connections:
             tavily:
-              # 把 tvly-xxx 真实 key 拼到 URL；或用环境变量 TAVILY_API_KEY 注入
-              url: https://mcp.tavily.com/mcp/?tavilyApiKey=<your-tvly-key>
+              url: https://mcp.tavily.com
+              endpoint: /mcp/
+
+tavily:
+  api-key: <your-tvly-key>  # 给 TavilyMcpAuthConfig 用，注入 Bearer header 进 MCP 请求
