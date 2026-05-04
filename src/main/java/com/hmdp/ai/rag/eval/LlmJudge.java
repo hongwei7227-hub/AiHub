@@ -52,9 +52,20 @@ public class LlmJudge {
     private static final Pattern RELEVANT_REGEX = Pattern.compile("\"relevant\"\\s*:\\s*(true|false)", Pattern.CASE_INSENSITIVE);
 
     private ChatModel judgeChatModel;   // lazy init in @PostConstruct
-    private final Map<String, Boolean> cache = new ConcurrentHashMap<>();
+    private final Map<String, JudgeResult> cache = new ConcurrentHashMap<>();
     private final AtomicLong llmCalls = new AtomicLong();
     private final AtomicLong llmFailures = new AtomicLong();
+
+    /** 单条 (query, doc) 判断结果。reason 保留下来供 audit / 报告。 */
+    public static final class JudgeResult {
+        public final boolean relevant;
+        public final String reason;
+        public JudgeResult(boolean relevant, String reason) {
+            this.relevant = relevant;
+            this.reason = reason == null ? "" : reason;
+        }
+        public static JudgeResult of(boolean relevant) { return new JudgeResult(relevant, ""); }
+    }
 
     @Value("${rag.eval.llm-judge.base-url}")
     private String baseUrl;
@@ -114,6 +125,11 @@ public class LlmJudge {
      * @return true=相关 / false=不相关或 LLM 调用全部失败兜底
      */
     public boolean judge(String query, String collection, Document doc) {
+        return judgeWithResult(query, collection, doc).relevant;
+    }
+
+    /** 同 judge() 但返回 JudgeResult（带 reason），供详情导出用。 */
+    public JudgeResult judgeWithResult(String query, String collection, Document doc) {
         if (!cacheEnabled) {
             return doJudgeWithRetry(query, doc);
         }
@@ -121,14 +137,14 @@ public class LlmJudge {
         return cache.computeIfAbsent(cacheKey, k -> doJudgeWithRetry(query, doc));
     }
 
-    private boolean doJudgeWithRetry(String query, Document doc) {
+    private JudgeResult doJudgeWithRetry(String query, Document doc) {
         String prompt = buildPrompt(query, doc);
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 llmCalls.incrementAndGet();
                 ChatResponse response = judgeChatModel.call(new Prompt(new UserMessage(prompt)));
                 String text = response.getResult().getOutput().getText();
-                Boolean parsed = parseRelevant(text);
+                JudgeResult parsed = parseRelevant(text);
                 if (parsed != null) {
                     return parsed;
                 }
@@ -144,7 +160,7 @@ public class LlmJudge {
         llmFailures.incrementAndGet();
         log.warn("[llm-judge] all {} attempts failed for query='{}', doc.id={} → defaulting to false",
                 maxRetries, truncate(query, 80), doc.getId());
-        return false;
+        return new JudgeResult(false, "ALL_RETRIES_FAILED");
     }
 
     /**
@@ -159,17 +175,25 @@ public class LlmJudge {
      * @return Map&lt;docId, bool&gt;，包含全部 docs 的判断
      */
     public Map<String, Boolean> judgeBatch(String query, String collection, List<Document> docs) {
+        Map<String, JudgeResult> rich = judgeBatchWithResult(query, collection, docs);
+        Map<String, Boolean> bools = new HashMap<>(rich.size());
+        rich.forEach((k, v) -> bools.put(k, v.relevant));
+        return bools;
+    }
+
+    /** 同 judgeBatch() 但返回 JudgeResult（带 reason），供详情导出用。 */
+    public Map<String, JudgeResult> judgeBatchWithResult(String query, String collection, List<Document> docs) {
         if (docs == null || docs.isEmpty()) {
             return Map.of();
         }
-        Map<String, Boolean> result = new HashMap<>(docs.size());
+        Map<String, JudgeResult> result = new HashMap<>(docs.size());
         List<Document> uncached = new ArrayList<>(docs.size());
 
         // 1) 命中缓存的 doc 直接填 result
         if (cacheEnabled) {
             for (Document d : docs) {
                 String key = query + "||" + collection + "||" + d.getId();
-                Boolean v = cache.get(key);
+                JudgeResult v = cache.get(key);
                 if (v != null) {
                     result.put(d.getId(), v);
                 } else {
@@ -185,13 +209,13 @@ public class LlmJudge {
         }
 
         // 2) 对未命中的 doc 发一次 batch LLM 调用
-        Map<String, Boolean> fresh = doBatchJudgeWithRetry(query, uncached);
+        Map<String, JudgeResult> fresh = doBatchJudgeWithRetry(query, uncached);
 
         // 3) 回填缓存 + result
         for (Document d : uncached) {
-            Boolean v = fresh.get(d.getId());
+            JudgeResult v = fresh.get(d.getId());
             if (v == null) {
-                v = false; // LLM 没返回这个 index → 兜底 false
+                v = new JudgeResult(false, "MISSING_FROM_BATCH");  // LLM 没返回这个 index → 兜底 false
             }
             result.put(d.getId(), v);
             if (cacheEnabled) {
@@ -201,24 +225,23 @@ public class LlmJudge {
         return result;
     }
 
-    private Map<String, Boolean> doBatchJudgeWithRetry(String query, List<Document> docs) {
+    private Map<String, JudgeResult> doBatchJudgeWithRetry(String query, List<Document> docs) {
         String prompt = buildBatchPrompt(query, docs);
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 llmCalls.incrementAndGet();
                 ChatResponse response = judgeChatModel.call(new Prompt(new UserMessage(prompt)));
                 String text = response.getResult().getOutput().getText();
-                Map<Integer, Boolean> parsed = parseBatchRelevant(text);
+                Map<Integer, JudgeResult> parsed = parseBatchRelevant(text);
                 if (parsed != null && !parsed.isEmpty()) {
-                    Map<String, Boolean> mapped = new HashMap<>(docs.size());
+                    Map<String, JudgeResult> mapped = new HashMap<>(docs.size());
                     for (int i = 0; i < docs.size(); i++) {
-                        Boolean v = parsed.get(i + 1); // prompt 用 1-based index
+                        JudgeResult v = parsed.get(i + 1); // prompt 用 1-based index
                         if (v != null) {
                             mapped.put(docs.get(i).getId(), v);
                         }
                     }
                     if (mapped.size() >= docs.size() / 2) {
-                        // 至少一半 doc 拿到判断就接受这次结果（避免单失败 doc 触发整批重试）
                         return mapped;
                     }
                     log.warn("[llm-judge-batch] attempt {}/{} parsed only {}/{} items, retry",
@@ -266,12 +289,12 @@ public class LlmJudge {
      * lenient parse for batch: 解析 JSON array，每项 {"index": N, "relevant": bool}
      * 返回 Map&lt;1-based index, bool&gt;。失败返回 null。
      */
-    static Map<Integer, Boolean> parseBatchRelevant(String text) {
+    static Map<Integer, JudgeResult> parseBatchRelevant(String text) {
         if (text == null || text.isBlank()) {
             return null;
         }
         // 1) 直接尝试 array
-        Map<Integer, Boolean> v = tryJsonArray(text);
+        Map<Integer, JudgeResult> v = tryJsonArray(text);
         if (v != null) return v;
 
         // 2) markdown code fence
@@ -291,14 +314,16 @@ public class LlmJudge {
         return null;
     }
 
-    private static Map<Integer, Boolean> tryJsonArray(String s) {
+    private static Map<Integer, JudgeResult> tryJsonArray(String s) {
         try {
             JsonNode arr = MAPPER.readTree(s.trim());
             if (!arr.isArray()) return null;
-            Map<Integer, Boolean> map = new HashMap<>();
+            Map<Integer, JudgeResult> map = new HashMap<>();
             for (JsonNode item : arr) {
                 if (item.has("index") && item.has("relevant") && item.get("relevant").isBoolean()) {
-                    map.put(item.get("index").asInt(), item.get("relevant").asBoolean());
+                    boolean relevant = item.get("relevant").asBoolean();
+                    String reason = item.has("reason") ? item.get("reason").asText("") : "";
+                    map.put(item.get("index").asInt(), new JudgeResult(relevant, reason));
                 }
             }
             return map.isEmpty() ? null : map;
@@ -330,12 +355,12 @@ public class LlmJudge {
      * 3) 正则抓 "relevant": true/false
      * 4) 全部失败返回 null（让上层重试）
      */
-    static Boolean parseRelevant(String text) {
+    static JudgeResult parseRelevant(String text) {
         if (text == null || text.isBlank()) {
             return null;
         }
         // 1) 整体 JSON
-        Boolean v = tryJson(text);
+        JudgeResult v = tryJson(text);
         if (v != null) return v;
 
         // 2) markdown code fence
@@ -345,19 +370,20 @@ public class LlmJudge {
             if (v != null) return v;
         }
 
-        // 3) 正则抓 "relevant": true/false
+        // 3) 正则抓 "relevant": true/false（这条路径拿不到 reason）
         Matcher m = RELEVANT_REGEX.matcher(text);
         if (m.find()) {
-            return Boolean.parseBoolean(m.group(1).toLowerCase());
+            return new JudgeResult(Boolean.parseBoolean(m.group(1).toLowerCase()), "");
         }
         return null;
     }
 
-    private static Boolean tryJson(String s) {
+    private static JudgeResult tryJson(String s) {
         try {
             JsonNode node = MAPPER.readTree(s.trim());
             if (node.has("relevant") && node.get("relevant").isBoolean()) {
-                return node.get("relevant").asBoolean();
+                String reason = node.has("reason") ? node.get("reason").asText("") : "";
+                return new JudgeResult(node.get("relevant").asBoolean(), reason);
             }
         } catch (Exception ignore) {
             // 不是合法 JSON，回退到下一步
@@ -381,5 +407,5 @@ public class LlmJudge {
     public int callCount() { return (int) llmCalls.get(); }
     public int failureCount() { return (int) llmFailures.get(); }
     public int cacheSize() { return cache.size(); }
-    public Map<String, Boolean> snapshotCache() { return Map.copyOf(cache); }
+    public Map<String, JudgeResult> snapshotResults() { return Map.copyOf(cache); }
 }

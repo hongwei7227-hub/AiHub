@@ -1,5 +1,7 @@
 package com.hmdp.ai.rag.eval;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.hmdp.ai.rag.dto.EvalQuery;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
@@ -10,10 +12,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -50,6 +58,13 @@ public class LlmJudgeEvaluator {
 
     @Value("${rag.eval.llm-judge.batch-mode:true}")
     private boolean batchMode;
+
+    /**
+     * 累积每条 query 的所有 (doc, similarity, relevant, reason, content) 详情，
+     * 评估完后由 {@link #dumpDetailsJson(Path, String)} 写成 UTF-8 JSON 供人工抽样审计。
+     * 内存占用：50 query × 10 doc × ~500 char content ≈ 250KB，可接受。
+     */
+    private final Map<Integer, QueryDetails> details = new ConcurrentHashMap<>();
 
     public LlmJudgeEvaluator(@Qualifier("knowledgeVectorStore") VectorStore knowledgeVectorStore,
                              @Qualifier("shopProfileVectorStore") VectorStore shopProfileVectorStore,
@@ -89,6 +104,18 @@ public class LlmJudgeEvaluator {
                 for (EvalQuery q : qs) {
                     List<JudgedHit> hits = retrieveAndJudge(q, collection, maxTopK, pool);
                     perQueryHits.put(q.getQueryId(), hits);
+
+                    // 累积详情供 dumpDetailsJson 使用
+                    List<HitDetail> hitDetails = new ArrayList<>(hits.size());
+                    for (int rank = 0; rank < hits.size(); rank++) {
+                        JudgedHit h = hits.get(rank);
+                        hitDetails.add(new HitDetail(
+                                rank + 1, h.docId, h.similarity, h.relevant, h.reason,
+                                truncate(h.content, 200)));
+                    }
+                    details.put(q.getQueryId(), new QueryDetails(
+                            q.getQueryId(), q.getQuery(), collection,
+                            q.getRelevantIds(), hitDetails));
 
                     for (JudgedHit h : hits) {
                         totalJudgements++;
@@ -154,6 +181,33 @@ public class LlmJudgeEvaluator {
         }
     }
 
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper()
+            .enable(SerializationFeature.INDENT_OUTPUT);
+
+    /**
+     * 把所有 query 的 LLM-judge 详情（含 reason）写到 UTF-8 JSON 文件。
+     * 解决 Plan C report 只有聚合数字、单条 (query, doc, reason) 不可查的痛点。
+     *
+     * @return 实际写入的文件路径
+     */
+    public Path dumpDetailsJson(Path outputDir, String dateStr) throws IOException {
+        Files.createDirectories(outputDir);
+        Path file = outputDir.resolve("rag_eval_judge_details_" + dateStr + ".json");
+        // 按 queryId 排序，列表化方便阅读
+        List<QueryDetails> ordered = details.values().stream()
+                .sorted((a, b) -> Integer.compare(a.queryId, b.queryId))
+                .collect(Collectors.toList());
+        Map<String, Object> wrapper = new LinkedHashMap<>();
+        wrapper.put("generatedAt", java.time.LocalDateTime.now().toString());
+        wrapper.put("totalQueries", ordered.size());
+        wrapper.put("note",
+                "Per-query LLM-judge audit: each query × top-K retrieved doc with similarity, relevant, reason, content preview. UTF-8.");
+        wrapper.put("queries", ordered);
+        Files.writeString(file, JSON_MAPPER.writeValueAsString(wrapper), StandardCharsets.UTF_8);
+        log.info("[llm-judge-details] wrote {} queries to {}", ordered.size(), file);
+        return file;
+    }
+
     /**
      * 小批量 judge 模式：仅跑前 N 条 query，输出每条 (query, doc) 的判断结果，给用户人工抽样验证。
      * 返回 List 以方便人工查看。
@@ -169,7 +223,7 @@ public class LlmJudgeEvaluator {
                 for (JudgedHit h : hits) {
                     samples.add(new SmallBatchSample(
                             q.getQueryId(), q.getQuery(), q.getTargetCollection(),
-                            h.docId, h.similarity, h.relevant, truncate(h.content, 160)));
+                            h.docId, h.similarity, h.relevant, h.reason, truncate(h.content, 160)));
                 }
                 taken++;
             }
@@ -211,13 +265,16 @@ public class LlmJudgeEvaluator {
         // batch-mode：单 query 1 次 LLM 调用判全部 top-K，节省 10x 配额（copilot-api 按次计费场景）
         // legacy mode：每个 (query, doc) 一次调用，并发 N 路，质量基线但配额贵
         if (batchMode) {
-            Map<String, Boolean> rel = llmJudge.judgeBatch(query.getQuery(), collection, hits);
+            Map<String, LlmJudge.JudgeResult> rel =
+                    llmJudge.judgeBatchWithResult(query.getQuery(), collection, hits);
             List<JudgedHit> out = new java.util.ArrayList<>(hits.size());
             for (Document d : hits) {
+                LlmJudge.JudgeResult r = rel.get(d.getId());
                 out.add(new JudgedHit(
                         d.getId(),
                         RecallEvaluator.getSimilarityScore(d),
-                        rel.getOrDefault(d.getId(), false),
+                        r != null && r.relevant,
+                        r == null ? "MISSING" : r.reason,
                         d.getText() == null ? "" : d.getText()));
             }
             return out;
@@ -226,11 +283,12 @@ public class LlmJudgeEvaluator {
         // legacy 路径：保留供按 token 计费订阅切回（每对单调用 + 并发）
         List<CompletableFuture<JudgedHit>> futures = hits.stream()
                 .map(d -> CompletableFuture.supplyAsync(() -> {
-                    boolean relevant = llmJudge.judge(query.getQuery(), collection, d);
+                    LlmJudge.JudgeResult r = llmJudge.judgeWithResult(query.getQuery(), collection, d);
                     return new JudgedHit(
                             d.getId(),
                             RecallEvaluator.getSimilarityScore(d),
-                            relevant,
+                            r.relevant,
+                            r.reason,
                             d.getText() == null ? "" : d.getText());
                 }, pool))
                 .collect(Collectors.toList());
@@ -259,17 +317,56 @@ public class LlmJudgeEvaluator {
         return s.length() <= max ? s : s.substring(0, max) + "...";
     }
 
+    /** 单条 query 的全部 retrieve+judge 详情，写 JSON 用 */
+    public static class QueryDetails {
+        public final int queryId;
+        public final String query;
+        public final String collection;
+        public final List<String> expectedRelevantIds;
+        public final List<HitDetail> hits;
+
+        public QueryDetails(int queryId, String query, String collection,
+                            List<String> expectedRelevantIds, List<HitDetail> hits) {
+            this.queryId = queryId;
+            this.query = query;
+            this.collection = collection;
+            this.expectedRelevantIds = expectedRelevantIds;
+            this.hits = hits;
+        }
+    }
+
+    public static class HitDetail {
+        public final int rank;        // 1-based
+        public final String docId;
+        public final double similarity;
+        public final boolean relevant;
+        public final String reason;
+        public final String contentPreview;
+
+        public HitDetail(int rank, String docId, double similarity, boolean relevant,
+                         String reason, String contentPreview) {
+            this.rank = rank;
+            this.docId = docId;
+            this.similarity = similarity;
+            this.relevant = relevant;
+            this.reason = reason == null ? "" : reason;
+            this.contentPreview = contentPreview;
+        }
+    }
+
     /** retrieve 后带 LLM-judge 标签的 hit */
     private static class JudgedHit {
         final String docId;
         final double similarity;
         final boolean relevant;
+        final String reason;
         final String content;
 
-        JudgedHit(String docId, double similarity, boolean relevant, String content) {
+        JudgedHit(String docId, double similarity, boolean relevant, String reason, String content) {
             this.docId = docId;
             this.similarity = similarity;
             this.relevant = relevant;
+            this.reason = reason == null ? "" : reason;
             this.content = content;
         }
     }
@@ -282,16 +379,18 @@ public class LlmJudgeEvaluator {
         public final String docId;
         public final double similarity;
         public final boolean relevant;
+        public final String reason;
         public final String contentPreview;
 
         public SmallBatchSample(int queryId, String query, String collection, String docId,
-                                 double similarity, boolean relevant, String contentPreview) {
+                                 double similarity, boolean relevant, String reason, String contentPreview) {
             this.queryId = queryId;
             this.query = query;
             this.collection = collection;
             this.docId = docId;
             this.similarity = similarity;
             this.relevant = relevant;
+            this.reason = reason == null ? "" : reason;
             this.contentPreview = contentPreview;
         }
     }
