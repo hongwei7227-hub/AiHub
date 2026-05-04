@@ -33,3 +33,8 @@ build/
 .vscode/
 /frontend-vue/.vite/
 
+### Plan: 私有配置 / 密钥（绝不进 git）###
+src/main/resources/application-local.yaml
+*.pem
+secrets/
+

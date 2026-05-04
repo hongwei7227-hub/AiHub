@@ -3,9 +3,6 @@ package com.hmdp.ai.config;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Data
 @ConfigurationProperties(prefix = "ai.agent")
 public class AiAgentProperties {
@@ -24,7 +21,7 @@ public class AiAgentProperties {
 
     private Streaming streaming = new Streaming();
 
-    private Mcp mcp = new Mcp();
+    private QWeather qweather = new QWeather();
 
     @Data
     public static class Memory {
@@ -74,22 +71,20 @@ public class AiAgentProperties {
         private int fallbackChunkSize = 24;
     }
 
+    /**
+     * Plan: 和风天气 API 接入配置。
+     * 私钥 PEM 路径 + Ed25519 JWT 鉴权所需 (kid, sub)；签发 TTL 短可控（默认 600s 每次签）。
+     * 默认 enabled=false，业务启动不要求配置；application-local.yaml 里启用并填真实值。
+     */
     @Data
-    public static class Mcp {
+    public static class QWeather {
         private boolean enabled = false;
-        private int timeoutMillis = 2500;
-        private List<String> toolWhitelist = new ArrayList<>(List.of("route_plan", "weather_brief"));
-        private McpServer route = defaultServer("route_plan");
-        private McpServer weather = defaultServer("weather_brief");
-    }
-
-    @Data
-    public static class McpServer {
-        private boolean enabled = false;
-        private String baseUrl;
-        private String invokePath = "/tools/invoke";
-        private String apiKey;
-        private String toolName;
+        private String apiHost;
+        private String projectId;
+        private String credentialId;
+        private String privateKeyPath;
+        private int timeoutMillis = 3000;
+        private long jwtTtlSeconds = 600;
     }
 
     @Data
@@ -97,11 +92,5 @@ public class AiAgentProperties {
         private String knowledge = "knowledge_vector";
         private String shopProfile = "shop_profile_vector";
         private String blogReview = "blog_review_vector";
-    }
-
-    private static McpServer defaultServer(String toolName) {
-        McpServer server = new McpServer();
-        server.setToolName(toolName);
-        return server;
     }
 }

@@ -29,6 +29,17 @@ spring:
         client:
           host: ${SPRING_AI_MILVUS_HOST:localhost}
           port: ${SPRING_AI_MILVUS_PORT:19530}
+    # Plan: Tavily 远程 MCP server（标准 MCP JSON-RPC over SSE）
+    # 默认 enabled=false 业务启动不连远端；application-local.yaml 启用并注入 TAVILY_API_KEY
+    mcp:
+      client:
+        enabled: ${TAVILY_MCP_ENABLED:false}
+        type: SYNC
+        request-timeout: 30s
+        sse:
+          connections:
+            tavily:
+              url: https://mcp.tavily.com/mcp/?tavilyApiKey=${TAVILY_API_KEY:}
   redis:
     password: 123456
     host: localhost
@@ -88,24 +99,16 @@ ai:
         knowledge: knowledge_vector
         shop-profile: shop_profile_vector
         blog-review: blog_review_vector
-    mcp:
-      enabled: ${AI_AGENT_MCP_ENABLED:false}
-      timeout-millis: ${AI_AGENT_MCP_TIMEOUT_MILLIS:2500}
-      tool-whitelist:
-        - ${AI_AGENT_MCP_ROUTE_TOOL_NAME:route_plan}
-        - ${AI_AGENT_MCP_WEATHER_TOOL_NAME:weather_brief}
-      route:
-        enabled: ${AI_AGENT_MCP_ROUTE_ENABLED:false}
-        base-url: ${AI_AGENT_MCP_ROUTE_BASE_URL:}
-        invoke-path: ${AI_AGENT_MCP_ROUTE_INVOKE_PATH:/tools/invoke}
-        api-key: ${AI_AGENT_MCP_ROUTE_API_KEY:}
-        tool-name: ${AI_AGENT_MCP_ROUTE_TOOL_NAME:route_plan}
-      weather:
-        enabled: ${AI_AGENT_MCP_WEATHER_ENABLED:false}
-        base-url: ${AI_AGENT_MCP_WEATHER_BASE_URL:}
-        invoke-path: ${AI_AGENT_MCP_WEATHER_INVOKE_PATH:/tools/invoke}
-        api-key: ${AI_AGENT_MCP_WEATHER_API_KEY:}
-        tool-name: ${AI_AGENT_MCP_WEATHER_TOOL_NAME:weather_brief}
+    # Plan: 和风天气真实 API。默认 enabled=false，业务启动不强求；application-local.yaml 启用并填真实值。
+    # 私钥 PEM 路径必须本地绝对路径，绝不进 git。
+    qweather:
+      enabled: ${QWEATHER_ENABLED:false}
+      api-host: ${QWEATHER_API_HOST:}
+      project-id: ${QWEATHER_PROJECT_ID:}
+      credential-id: ${QWEATHER_KID:}
+      private-key-path: ${QWEATHER_PRIVATE_KEY_PATH:}
+      timeout-millis: ${QWEATHER_TIMEOUT_MILLIS:3000}
+      jwt-ttl-seconds: 600
 
 # Caffeine 本地缓存开关（true=启用二级缓存，false=退回纯 Redis 模式）
 caffeine:
