@@ -57,6 +57,7 @@ public class AiAgentController {
         createRequest.setContent(request.getPrompt());
         createRequest.setX(request.getX());
         createRequest.setY(request.getY());
+        createRequest.setShopId(request.getShopId());
         return aiAgentService.createChatMessage(createRequest);
     }
 

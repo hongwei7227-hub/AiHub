@@ -12,4 +12,6 @@ public class CreateChatMessageRequest {
     private Double x;
 
     private Double y;
+
+    private Long shopId;
 }

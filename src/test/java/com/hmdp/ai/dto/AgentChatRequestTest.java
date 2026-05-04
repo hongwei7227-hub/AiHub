@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class AgentChatRequestTest {
 
@@ -33,5 +34,30 @@ class AgentChatRequestTest {
 
         assertEquals(1L, request.getConversationId());
         assertEquals("你好", request.getPrompt());
+    }
+
+    @Test
+    void shouldDeserializeShopIdWhenPresent() throws Exception {
+        AgentChatRequest request = objectMapper.readValue("""
+                {
+                  "conversationId": 1,
+                  "prompt": "这家好不好吃",
+                  "shopId": 12345
+                }
+                """, AgentChatRequest.class);
+
+        assertEquals(12345L, request.getShopId());
+    }
+
+    @Test
+    void shouldAllowMissingShopId() throws Exception {
+        AgentChatRequest request = objectMapper.readValue("""
+                {
+                  "conversationId": 1,
+                  "prompt": "附近有什么好吃的"
+                }
+                """, AgentChatRequest.class);
+
+        assertNull(request.getShopId());
     }
 }

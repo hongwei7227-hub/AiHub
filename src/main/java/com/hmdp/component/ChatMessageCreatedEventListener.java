@@ -76,6 +76,7 @@ public class ChatMessageCreatedEventListener {
             loopRequest.setPrompt(event.getContent());
             loopRequest.setX(event.getX());
             loopRequest.setY(event.getY());
+            loopRequest.setShopId(event.getShopId());
             loopRequest.setHistoryMessages(historyMessages);
 
             AgentLoopResult loopResult = agentLoopExecutor.execute(loopRequest, new StreamingLoopObserver(event));
