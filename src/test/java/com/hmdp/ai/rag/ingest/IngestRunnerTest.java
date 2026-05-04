@@ -1,5 +1,9 @@
 package com.hmdp.ai.rag.ingest;
 
+import io.milvus.client.MilvusServiceClient;
+import io.milvus.grpc.GetCollectionStatisticsResponse;
+import io.milvus.param.collection.GetCollectionStatisticsParam;
+import io.milvus.response.GetCollStatResponseWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -27,6 +31,26 @@ class IngestRunnerTest {
 
     @Autowired
     private JsonlIngestService ingestService;
+
+    @Autowired
+    private MilvusServiceClient milvusClient;
+
+    /** Step C：只查 collection 当前条数，不灌库。验证数据完整性用。 */
+    @Test
+    void countEntities() {
+        for (String c : new String[]{"shop_profile_vector", "blog_review_vector", "knowledge_vector"}) {
+            try {
+                GetCollectionStatisticsResponse resp = milvusClient.getCollectionStatistics(
+                        GetCollectionStatisticsParam.newBuilder()
+                                .withCollectionName(c)
+                                .build()).getData();
+                long n = new GetCollStatResponseWrapper(resp).getRowCount();
+                log.info("[count] {} = {} entities", c, n);
+            } catch (Exception e) {
+                log.warn("[count] {} → {}", c, e.toString());
+            }
+        }
+    }
 
     @Test
     void ingestAll() {

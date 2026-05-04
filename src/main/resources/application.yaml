@@ -123,3 +123,26 @@ rag:
     top-k-list: 3,5,10
     max-top-k: 10
     failure-case-limit: 8
+    # ===== LLM-as-judge (Plan C) =====
+    # base-url 默认指向用户本地 OpenAI-compatible 反代；api-key 默认留空必须通过环境变量注入
+    # 跑测试前 export LLM_JUDGE_API_KEY=sk-xxx 或在 IDE Run Configuration 注入
+    llm-judge:
+      # 默认 false：业务启动不会拉起 judge bean。EvalRunnerTest 用 @SpringBootTest properties 显式打开
+      enabled: ${LLM_JUDGE_ENABLED:false}
+      # batch-mode=true：单 query 批判 top-K（一次 LLM 调用判 N 个 doc）→ 50 calls 完成全量评估，省配额。
+      # batch-mode=false：每对 (query, doc) 一次调用 → 500 calls，配额贵但失败粒度细 + 质量基线。
+      # 若买真按 token 计费的订阅（如 Anthropic API 直连），改 false 拿更高质量。
+      batch-mode: ${LLM_JUDGE_BATCH_MODE:true}
+      # copilot-api 反代实测 10 并发 4s 全成功，3 路是安全裕度。
+      # Spring AI 内部 RetryTemplate 已在 LlmJudge.init() 里关掉（maxAttempts=1），不会和我代码层双层重试
+      concurrency: 3
+      max-retries: 3
+      retry-base-sleep-ms: 1000
+      doc-content-truncate: 300
+      cache-enabled: true
+      # 注意：Spring AI 的 OpenAiApi 默认 completionsPath=/v1/chat/completions，
+      # base-url 不要带 /v1 后缀，否则会拼成双 /v1/v1 → 404
+      # copilot-api 反代（4141）的 model ID 用点号写法 claude-haiku-4.5（不是 Anthropic 官方的 dash）
+      base-url: ${LLM_JUDGE_BASE_URL:http://127.0.0.1:4141}
+      api-key: ${LLM_JUDGE_API_KEY:dummy}
+      model: ${LLM_JUDGE_MODEL:claude-haiku-4.5}
