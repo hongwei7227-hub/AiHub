@@ -11,7 +11,9 @@ spring:
     password: 123456
   ai:
     openai:
-      base-url: ${SPRING_AI_OPENAI_BASE_URL:https://api.siliconflow.cn/v1}
+      # Spring AI 1.1.x 起 chat client 默认 completions-path = /v1/chat/completions，
+      # base-url 不要带 /v1 后缀（1.0.x 是相反的，要带 /v1）。embedding 配置同此规则
+      base-url: ${SPRING_AI_OPENAI_BASE_URL:https://api.siliconflow.cn}
       api-key: ${SPRING_AI_OPENAI_API_KEY:***REMOVED_SILICONFLOW_KEY***}
       chat:
         options:
