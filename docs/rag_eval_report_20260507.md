@@ -1,9 +1,9 @@
 # RAG 召回评估报告
 
-- **生成时间**：2026-05-07T18:25:57.110077
+- **生成时间**：2026-05-07T19:59:22.2756332
 - **评估集**：50 条 query
 - **Embedding 模型**：BAAI/bge-m3 (1024 维)
-- **总耗时**：4350.242 秒
+- **总耗时**：2901.67 秒
 
 ## 0. 评估范围声明
 
@@ -142,7 +142,7 @@
 
 ## 5.5 LLM-as-judge 评估结果
 
-> **Sanity check**：LLM-judge 总命中率（所有 query × 所有 retrieved doc 里判 true 的比例）= 12.4%
+> **Sanity check**：LLM-judge 总命中率（所有 query × 所有 retrieved doc 里判 true 的比例）= 12.6%
 > ⚠️ **超出 30%~70% 健康区间**——可能 judge 太宽松或 prompt 设计有 bug，结果需要谨慎解读
 > LLM 调用：50 次，失败 0（默认 false 兜底），缓存大小 380
 
@@ -189,14 +189,14 @@
 | Threshold | top-K | LLM-Precision@K | LLM-MRR | LLM-HitRate |
 |---|---|---|---|---|
 | 0.50 | 3 | 0.367 | 1.000 | 1.000 |
-| 0.50 | 5 | 0.233 | 1.000 | 1.000 |
+| 0.50 | 5 | 0.253 | 1.000 | 1.000 |
 | 0.50 | 10 | 0.147 | 1.000 | 1.000 |
 | 0.60 | 3 | 0.550 | 1.000 | 1.000 |
-| 0.60 | 5 | 0.510 | 1.000 | 1.000 |
-| 0.60 | 10 | 0.484 | 1.000 | 1.000 |
+| 0.60 | 5 | 0.530 | 1.000 | 1.000 |
+| 0.60 | 10 | 0.495 | 1.000 | 1.000 |
 | 0.65 | 3 | 0.800 | 1.000 | 1.000 |
-| 0.65 | 5 | 0.765 | 1.000 | 1.000 |
-| 0.65 | 10 | 0.758 | 1.000 | 1.000 |
+| 0.65 | 5 | 0.790 | 1.000 | 1.000 |
+| 0.65 | 10 | 0.783 | 1.000 | 1.000 |
 | 0.70 | 3 | 0.933 | 1.000 | 1.000 |
 | 0.70 | 5 | 0.933 | 1.000 | 1.000 |
 | 0.70 | 10 | 0.933 | 1.000 | 1.000 |
@@ -209,7 +209,7 @@
 |---|---|---|---|---|---|---|
 | shop_profile_vector | 0.000 | 0.000 | +0.000 | 0.000 | 0.000 | +0.000 |
 | blog_review_vector | 0.000 | 0.050 | +0.050 | 0.000 | 0.050 | +0.050 |
-| knowledge_vector | 0.000 | 0.765 | +0.765 | 0.000 | 1.000 | +1.000 |
+| knowledge_vector | 0.000 | 0.790 | +0.790 | 0.000 | 1.000 | +1.000 |
 
 ## 5.7 Generation 层评估（Plan D：Faithfulness + Answer Relevancy）
 
@@ -226,8 +226,8 @@
 | 指标 | 值 |
 |---|---|
 | 总 query 数 | 50 |
-| 整体平均 Faithfulness | 0.692 |
-| 整体平均 Answer Relevancy | 0.420 |
+| 整体平均 Faithfulness | 0.806 |
+| 整体平均 Answer Relevancy | 0.700 |
 | Generation 失败数 | 0 |
 | Judge 失败数 | 0 |
 
@@ -235,9 +235,9 @@
 
 | Collection | Query 数 | Avg Faithfulness | Avg Relevancy | Gen Failed | Judge Failed |
 |---|---|---|---|---|---|
-| shop_profile_vector | 20 | 0.665 | 0.350 | 0 | 0 |
-| blog_review_vector | 20 | 0.670 | 0.400 | 0 | 0 |
-| knowledge_vector | 10 | 0.790 | 0.600 | 0 | 0 |
+| shop_profile_vector | 20 | 0.820 | 0.450 | 0 | 0 |
+| blog_review_vector | 20 | 0.695 | 0.800 | 0 | 0 |
+| knowledge_vector | 10 | 1.000 | 1.000 | 0 | 0 |
 
 ### 5.7.3 抽样详情（前 8 条）
 
@@ -245,36 +245,36 @@
 
 | qid | collection | query | answer | F | R | F-reason | R-reason |
 |---|---|---|---|---|---|---|---|
-| 1 | shop_profile | 杭州有什么好吃的杭帮菜 | 根据现有上下文，无法完整回答。上下文中的信息主要涉及多个名为“楼外楼”的店铺，未提及杭帮菜的具体菜品。 | 0.70 | ✗ | 兜底回复，未编造，准确描述上下文 | 兜底回复未实际作答 |
-| 2 | shop_profile | 杭州的杭帮菜推荐 | 根据现有上下文，无法完整回答。上下文主要提及了多个名为“楼外楼”的店铺，未提供关于杭帮菜的信息。 | 0.70 | ✗ | 兜底回复且对上下文描述准确 | 未提供实质推荐，属兜底回复 |
-| 3 | shop_profile | 杭州有什么好吃的中餐 | - 楼外楼 - �炉鱼(拱墅万达广场店) - �蔡馬洪涛烤肉·老北京铜锅涮羊肉 | 1.00 | ✓ | 所有店铺名均在上下文中 | 列举了杭州中餐馆 |
-| 4 | shop_profile | 杭州的中餐推荐 | - 楼外楼（拱宸桥/上塘） - 蔡馬洪涛烤肉·老北京铜锅涮羊肉（拱宸桥/上塘/上塘路1035号） - 炉鱼(拱墅万达广场… | 0.40 | ✓ | 楼外楼位置信息编造，超出上下文 | 给出了具体餐厅推荐 |
-| 5 | shop_profile | 杭州有什么好吃的甜品 | - 安之秀菓  - - �星bucks（杭州远洋乐堤港店） | 0.40 | ✓ | 星巴克店铺位置信息无依据 | 提供了甜品店名 |
-| 6 | shop_profile | 杭州的甜品推荐 | 根据现有上下文，无法完整回答关于杭州甜品推荐的问题。提供的信息主要涉及餐厅和人均消费、评分等，未提及甜品相关信息。 | 0.70 | ✗ | 兜底回复，未编造，准确描述上下文 | 兜底回复，未实际回答 |
-| 7 | shop_profile | 杭州有什么好吃的小吃 | 根据现有上下文，无法完整回答。提供的信息主要涉及几家餐厅的地址、人均消费和评分，但没有具体提到它们的小吃种类。 | 1.00 | ✗ | 答案完全基于上下文，无编造 | 兜底回复，未实际回答 |
-| 8 | shop_profile | 杭州的小吃推荐 | - Mamala乐堤港店（人均60元，评分4.4） | 0.00 | ✓ | 人均价格和评分均与上下文不符 | 直接推荐了杭州餐厅 |
+| 1 | shop_profile | 杭州有什么好吃的杭帮菜 | 根据现有上下文，无法完整回答 | 0.70 | ✗ | 信息不足兜底，非编造 | 兜底回复未直接作答 |
+| 2 | shop_profile | 杭州的杭帮菜推荐 | 根据现有上下文，无法完整回答 | 0.70 | ✗ | 信息不足兜底表述，无编造 | 兜底回复，未实际作答 |
+| 3 | shop_profile | 杭州有什么好吃的中餐 | - Mamala：人均290元，评分4.9 - 外婆家：未提供详细信息 | 1.00 | ✓ | 答案与上下文完全一致 | 推荐了中餐厅（含信息与店名） |
+| 4 | shop_profile | 杭州的中餐推荐 | - Mamala：杭州远洋乐堤港店，人均消费290元，评分4.9。 - 外婆家：未提供详细地址和人均消费信息。 - 吴山… | 1.00 | ✓ | 各条陈述均有上下文依据 | 直接列出杭州中餐推荐 |
+| 5 | shop_profile | 杭州有什么好吃的甜品 | 根据现有上下文，无法完整回答 | 0.70 | ✗ | 兜底答复承认不足不算编造 | 兜底说明未实质作答 |
+| 6 | shop_profile | 杭州的甜品推荐 | 甜品：甜品，满记甜品 | 1.00 | ✓ | 所列店名上下文均有 | 给出甜品店名属推荐 |
+| 7 | shop_profile | 杭州有什么好吃的小吃 | 根据现有上下文，无法完整回答。上下文主要提供了几家杭州店铺的信息，但没有明确提到小吃。 | 0.70 | ✗ | 属信息不足兜底，按规则计分 | 兜底说明，未答小吃 |
+| 8 | shop_profile | 杭州的小吃推荐 | 根据现有上下文，无法完整回答。上述信息主要涉及杭州的餐饮和娱乐场所，没有提到具体的小吃推荐。 | 0.70 | ✗ | 符合兜底规则且归类与上下文一致 | 兜底回复，未给小吃推荐 |
 
 ### 5.7.4 低 Faithfulness Case（潜在幻觉）
 
 > 这些 case 是 generation 层翻车的典型 —— retrieval 召回了内容，但模型答案脱离 contexts。
 
-**qid=8 / shop_profile_vector**  
-- Query: `杭州的小吃推荐`
-- Answer: `- Mamala乐堤港店（人均60元，评分4.4）`
-- Faithfulness: 0.00（reason: 人均价格和评分均与上下文不符）
-- Relevancy: ✓（reason: 直接推荐了杭州餐厅）
+**qid=26 / blog_review_vector**  
+- Query: `BREAD TALK在哪？有什么推荐？`
+- Answer: `BREAD TALK主要位于万象城和大悦城等地。推荐商品包括： - 菠萝包：脆脆的，香的不得了。 - 北海道面包：价格平易近人，口感不错。 - 全麦面包：比较有营养。 - 芝士蛋糕：比较甜，奶油较多。 - 85冰咖啡：好喝。 - 芝士：比较甜，奶油较多。`
+- Faithfulness: 0.40（reason: 大悦城无依据，北海道与85咖啡归因不当）
+- Relevancy: ✓（reason: 含门店位置与推荐）
 
-**qid=12 / shop_profile_vector**  
-- Query: `适合家庭聚餐的中餐`
-- Answer: `- 外婆家：适合家庭聚餐的中餐选择。 - 炉鱼：适合家庭聚餐的中餐选择，但主要是火锅类型。 - 太兴：适合家庭聚餐的中餐选择。`
-- Faithfulness: 0.10（reason: 核心声明'适合家庭聚餐'完全编造）
-- Relevancy: ✓（reason: 直接推荐了中餐餐厅）
+**qid=27 / blog_review_vector**  
+- Query: `沈大成糕点怎么样？`
+- Answer: `- 沈大成糕点在杭州有店铺，受到不少好评。 - 双酿团和次饭糕等点心受到推荐，尤其是双酿团，内有豆沙和芝麻馅，外裹椰蓉。 - 传统糕点价格适中，口味正宗。 - 有顾客提到糕团点心美味，但也有顾客表示蛋蛋酥酥过甜。`
+- Faithfulness: 0.40（reason: 蛋蛋酥酥过甜无文本依据）
+- Relevancy: ✓（reason: 评价口味、口碑与价格）
 
-**qid=33 / blog_review_vector**  
-- Query: `这家餐厅的东坡肉怎么样？`
-- Answer: `味道不错，有点肥腻，但美味。`
-- Faithfulness: 0.30（reason: 与原文矛盾，评论明确说肥而不腻）
-- Relevancy: ✓（reason: 直接评价了东坡肉味道）
+**qid=32 / blog_review_vector**  
+- Query: `宁波小笼包哪家好吃`
+- Answer: `- 宁波新丰小吃的小笼包味道较好，7元一笼。 - 萧山知味观的小笼包也不错，与新丰小吃的小笼包味道相近。 - 上海南翔蟹黄小笼包较大，价格较高，个人体验不佳。 - 根据现有上下文，无法完整回答其他宁波小笼包店铺的评价。`
+- Faithfulness: 0.40（reason: 杭州新丰被误写为宁波新丰）
+- Relevancy: ✓（reason: 给出了宁波好吃小笼示例）
 
 ### 5.7.5 观察分析
 
@@ -297,19 +297,19 @@
 
 | Mode | Avg Faithfulness | Avg Relevancy | Generation Failed | Judge Failed |
 |---|---|---|---|---|
-| **vector**（Plan D 基线）| 0.724 | 0.300 | 0 | 0 |
-| **hybrid**（Plan E 修复）| 0.720 | 0.720 | 0 | 0 |
-| **Δ**（hybrid − vector）| -0.004 | **+0.420** | - | - |
+| **vector**（Plan D 基线）| 0.730 | 0.320 | 0 | 0 |
+| **hybrid**（Plan E 修复）| 0.724 | 0.600 | 0 | 0 |
+| **Δ**（hybrid − vector）| -0.006 | **+0.280** | - | - |
 
 ### 5.7.6.2 按 Collection 分组对比
 
 | Collection | Mode | Avg Faithfulness | Avg Relevancy | Δ Relevancy |
 |---|---|---|---|---|
-| shop_profile_vector | vector  | 0.610 | 0.200 | - |
-| shop_profile_vector | **hybrid**  | 0.700 | 0.350 | **+0.150** |
-| blog_review_vector | vector  | 0.715 | 0.050 | - |
-| blog_review_vector | **hybrid**  | 0.600 | 0.950 | **+0.900** |
-| knowledge_vector | vector  | 0.970 | 1.000 | - |
+| shop_profile_vector | vector  | 0.640 | 0.250 | - |
+| shop_profile_vector | **hybrid**  | 0.678 | 0.300 | **+0.050** |
+| blog_review_vector | vector  | 0.685 | 0.050 | - |
+| blog_review_vector | **hybrid**  | 0.633 | 0.700 | **+0.650** |
+| knowledge_vector | vector  | 1.000 | 1.000 | - |
 | knowledge_vector | **hybrid**  | 1.000 | 1.000 | **+0.000** |
 
 ### 5.7.6.3 hybrid 提升最大的 5 条 query
@@ -318,66 +318,67 @@
 
 | qid | collection | query | vector R | hybrid R | Δ |
 |---|---|---|---|---|---|
-| 3 | shop_profile | 杭州有什么好吃的中餐 | ✗  | ✓  | **+1** |
 | 4 | shop_profile | 杭州的中餐推荐 | ✗  | ✓  | **+1** |
-| 7 | shop_profile | 杭州有什么好吃的小吃 | ✗  | ✓  | **+1** |
 | 21 | blog_review | 银泰百货在哪里？ | ✗  | ✓  | **+1** |
-| 22 | blog_review | 江浙菜适合请客吗？ | ✗  | ✓  | **+1** |
+| 23 | blog_review | 杭州酒店打车难怎么办 | ✗  | ✓  | **+1** |
+| 24 | blog_review | 火车站附近哪里有卖鸭舌？ 鸭舌多少钱一斤？ 火车站附近哪家卖… | ✗  | ✓  | **+1** |
+| 25 | blog_review | 烤肉和火锅哪种更好吃？ | ✗  | ✓  | **+1** |
 
-_共 21 条 query 在 hybrid 模式下从 ✗ 翻转为 ✓（仅展示前 5 条）_
+_共 15 条 query 在 hybrid 模式下从 ✗ 翻转为 ✓（仅展示前 5 条）_
 
-## 5.7.7 Hybrid vs HyDE-Hybrid 对比（Plan F）
+## 5.7.8 Hybrid vs Hybrid+Rerank 对比（Plan G）
 
-> Plan E hybrid 把 review relevancy 从 0.00 拉到 0.75，但 shop 仍在 0.25。
-> 根因：shop 类 query 太宽泛（"杭州的中餐推荐"），BM25 关键词命中度低（"中餐"在很多店都出现，区分度差），
-> 向量召回又因 bge-m3 在"抽象意图 → 具体实例"上召回率低。
-> Plan F 上 **HyDE (Hypothetical Document Embedding)**：用业务 ChatModel (Qwen2.5-7B) 先编一个
-> "理想答案示例"，再用假想答案的 embedding 去检索。原理：抽象 query 和具体 doc 的 embedding 距离远，
-> 但假想答案和具体 doc 的 embedding 距离近（[Gao et al. 2022](https://arxiv.org/abs/2212.10496)）。
+> Plan E hybrid 把 review relevancy 从 0.00 拉到 0.95，但 shop_profile 仍在 0.35。
+> 根因：bge-m3 (vector) 和 Lucene BM25 (keyword) 都是 bi-encoder / 词频，召回阶段无法精确
+> 区分细粒度相关性。Plan F (HyDE) 试图修但因 Qwen2.5-7B 编 hypothetical 不稳而退化。
+> Plan G 改走 **Cross-encoder Reranker (BAAI/bge-reranker-v2-m3 via SiliconFlow)**——
+> 召回 top-20 → cross-encoder 直接对 (query, doc) 对评分 → 取 top-5。
 >
-> **HyDE 不污染生成阶段**：检索时用假想答案的 embedding，但最终生成 prompt 里仍是用户原始 query。
+> Reranker 是业界 RAG 工程化的标准下一步（Pinecone / Anthropic Claude RAG cookbook 均推荐）。
 
-### 5.7.7.1 整体指标对比
+### 5.7.8.1 整体指标对比
 
 | Mode | Avg Faithfulness | Avg Relevancy | Generation Failed | Judge Failed |
 |---|---|---|---|---|
-| **hybrid**（Plan E）| 0.720 | 0.720 | 0 | 0 |
-| **hyde-hybrid**（Plan F）| 0.692 | 0.420 | 0 | 0 |
-| **Δ**（hyde-hybrid − hybrid）| -0.028 | **-0.300** | - | - |
+| **hybrid**（Plan E）| 0.724 | 0.600 | 0 | 0 |
+| **hybrid+rerank**（Plan G）| 0.806 | 0.700 | 0 | 0 |
+| **Δ**（hybrid+rerank − hybrid）| +0.082 | **+0.100** | - | - |
 
-### 5.7.7.2 按 Collection 分组对比
+### 5.7.8.2 按 Collection 分组对比
 
 | Collection | Mode | Avg Faithfulness | Avg Relevancy | Δ Relevancy |
 |---|---|---|---|---|
-| shop_profile_vector | hybrid  | 0.700 | 0.350 | - |
-| shop_profile_vector | **hyde-hybrid**  | 0.665 | 0.350 | **+0.000** |
-| blog_review_vector | hybrid  | 0.600 | 0.950 | - |
-| blog_review_vector | **hyde-hybrid**  | 0.670 | 0.400 | **-0.550** |
+| shop_profile_vector | hybrid  | 0.678 | 0.300 | - |
+| shop_profile_vector | **hybrid+rerank**  | 0.820 | 0.450 | **+0.150** |
+| blog_review_vector | hybrid  | 0.633 | 0.700 | - |
+| blog_review_vector | **hybrid+rerank**  | 0.695 | 0.800 | **+0.100** |
 | knowledge_vector | hybrid  | 1.000 | 1.000 | - |
-| knowledge_vector | **hyde-hybrid**  | 0.790 | 0.600 | **-0.400** |
+| knowledge_vector | **hybrid+rerank**  | 1.000 | 1.000 | **+0.000** |
 
-### 5.7.7.3 HyDE 修复的 query（hybrid ✗ → hyde-hybrid ✓）
+### 5.7.8.3 Reranker 修复的 query（hybrid ✗ → hybrid+rerank ✓）
 
-> 这些是 HyDE 真正带来的增益——hybrid 没召回相关 doc 的 case，hyde 因为假想答案的语义靠近 doc 而成功。
+> 这些是 cross-encoder 精排带来的真实增益——hybrid 召回了文档但顺序不优，rerank 把更相关的拉到前面。
 
-| qid | collection | query | hybrid R | hyde-hybrid R |
+| qid | collection | query | hybrid R | hybrid+rerank R |
 |---|---|---|---|---|
-| 5 | shop_profile | 杭州有什么好吃的甜品 | ✗ | ✓ |
-| 8 | shop_profile | 杭州的小吃推荐 | ✗ | ✓ |
+| 6 | shop_profile | 杭州的甜品推荐 | ✗ | ✓ |
+| 11 | shop_profile | 适合家庭聚餐的杭帮菜 | ✗ | ✓ |
+| 16 | shop_profile | 杭州招牌菜有东坡肉的店 | ✗ | ✓ |
+| 22 | blog_review | 江浙菜适合请客吗？ | ✗ | ✓ |
+| 32 | blog_review | 宁波小笼包哪家好吃 | ✗ | ✓ |
 
-### 5.7.7.4 HyDE 拉低的 query（hybrid ✓ → hyde-hybrid ✗）
+_共 8 条 query 翻转（仅展示前 5 条）_
 
-> HyDE 不是无副作用——假想答案如果偏离 query 真实语义，反而可能误导检索。
+### 5.7.8.4 Reranker 拉低的 query（hybrid ✓ → hybrid+rerank ✗）
 
-| qid | collection | query | hybrid R | hyde-hybrid R |
+> 这些 case 是 rerank 副作用——cross-encoder 评分把原本召回正确的 doc 排到 topK 外。
+> 对应 doc 文本对 cross-encoder 不友好（如 shop 类只有结构化字段，没有自然语言描述）。
+
+| qid | collection | query | hybrid R | hybrid+rerank R |
 |---|---|---|---|---|
-| 7 | shop_profile | 杭州有什么好吃的小吃 | ✓ | ✗ |
-| 9 | shop_profile | 杭州有什么好吃的火锅 | ✓ | ✗ |
-| 21 | blog_review | 银泰百货在哪里？ | ✓ | ✗ |
 | 23 | blog_review | 杭州酒店打车难怎么办 | ✓ | ✗ |
-| 25 | blog_review | 烤肉和火锅哪种更好吃？ | ✓ | ✗ |
-
-_共 17 条 query 反向翻转（仅展示前 5 条）_
+| 29 | blog_review | 附近有不接送的烧烤店吗？ | ✓ | ✗ |
+| 35 | blog_review | 张生记的菜为什么没想象中那么好吃？ | ✓ | ✗ |
 
 ## 6. Failure Case 分析
 

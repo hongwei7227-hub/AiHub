@@ -63,13 +63,35 @@ public class EvalReportWriter {
                       GenerationReport generationReport,
                       GenerationReport vectorBaselineReport,
                       int queryCount, long elapsedMs) throws IOException {
+        return writePlanG(outputDir, report, filterExp, failures,
+                vectorBaselineReport, generationReport, null, queryCount, elapsedMs);
+    }
+
+    /**
+     * Plan G 主入口：三 generation 报告（vector / hybrid / hybrid+rerank）。
+     * - rerankReport != null 时主表用 rerankReport（最强模式）
+     * - rerankReport == null 时主表用 hybridReport（退化为 Plan E 模式）
+     * - Section 5.7.6 始终对比 vector vs hybrid（Plan E 既有数据）
+     * - Section 5.7.8 在有 rerankReport 时对比 hybrid vs hybrid+rerank（Plan G 新增）
+     */
+    public Path writePlanG(Path outputDir, AggregatedReport report,
+                            FilterExperimentRunner.FilterExperimentResult filterExp,
+                            List<FailureCaseAnalyzer.FailureCase> failures,
+                            GenerationReport vectorReport,
+                            GenerationReport hybridReport,
+                            GenerationReport rerankReport,
+                            int queryCount, long elapsedMs) throws IOException {
         Files.createDirectories(outputDir);
         String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         Path file = outputDir.resolve("rag_eval_report_" + dateStr + ".md");
 
+        // 主表用最强模式（rerank > hybrid > vector，按可用性挑）
+        GenerationReport mainReport = rerankReport != null ? rerankReport
+                : (hybridReport != null ? hybridReport : vectorReport);
+
         StringBuilder sb = new StringBuilder(8192);
         appendHeader(sb, queryCount, elapsedMs);
-        appendScopeDeclaration(sb, generationReport != null);
+        appendScopeDeclaration(sb, mainReport != null);
         appendEvalConfig(sb, report);
         if (report.hasLlmJudge()) {
             appendDualMethodBoundaries(sb);   // Section 1.5
@@ -79,11 +101,14 @@ public class EvalReportWriter {
         if (report.hasLlmJudge()) {
             appendLlmJudgeResults(sb, report);   // Section 5.5
         }
-        if (generationReport != null) {
-            appendGenerationResults(sb, generationReport);   // Section 5.7（Plan D）
+        if (mainReport != null) {
+            appendGenerationResults(sb, mainReport);   // Section 5.7（Plan D）—— 用主表
         }
-        if (generationReport != null && vectorBaselineReport != null) {
-            appendVectorHybridComparison(sb, vectorBaselineReport, generationReport);   // Section 5.7.6（Plan E）
+        if (vectorReport != null && hybridReport != null) {
+            appendVectorHybridComparison(sb, vectorReport, hybridReport);   // Section 5.7.6（Plan E）
+        }
+        if (hybridReport != null && rerankReport != null) {
+            appendRerankComparison(sb, hybridReport, rerankReport);          // Section 5.7.8（Plan G 新增）
         }
         appendFailureCases(sb, failures);
         if (report.hasLlmJudge()) {
@@ -610,6 +635,114 @@ public class EvalReportWriter {
             }
             if (uplifts.size() > 5) {
                 sb.append("\n_共 ").append(uplifts.size()).append(" 条 query 在 hybrid 模式下从 ✗ 翻转为 ✓（仅展示前 5 条）_\n");
+            }
+            sb.append("\n");
+        }
+    }
+
+    /**
+     * Plan G Section 5.7.8：hybrid vs hybrid+rerank 对比。
+     * Plan E hybrid 把 review 从 0 拉到 0.95，但 shop 留在 0.35。Plan G 加 cross-encoder
+     * Reranker (BAAI/bge-reranker-v2-m3) 在 RRF 合并后精排候选，目标修复 shop 的细粒度区分度问题。
+     */
+    private void appendRerankComparison(StringBuilder sb,
+                                         GenerationReport hyb,
+                                         GenerationReport rer) {
+        sb.append("## 5.7.8 Hybrid vs Hybrid+Rerank 对比（Plan G）\n\n");
+        sb.append("> Plan E hybrid 把 review relevancy 从 0.00 拉到 0.95，但 shop_profile 仍在 0.35。\n");
+        sb.append("> 根因：bge-m3 (vector) 和 Lucene BM25 (keyword) 都是 bi-encoder / 词频，召回阶段无法精确\n");
+        sb.append("> 区分细粒度相关性。Plan F (HyDE) 试图修但因 Qwen2.5-7B 编 hypothetical 不稳而退化。\n");
+        sb.append("> Plan G 改走 **Cross-encoder Reranker (BAAI/bge-reranker-v2-m3 via SiliconFlow)**——\n");
+        sb.append("> 召回 top-20 → cross-encoder 直接对 (query, doc) 对评分 → 取 top-5。\n>\n");
+        sb.append("> Reranker 是业界 RAG 工程化的标准下一步（Pinecone / Anthropic Claude RAG cookbook 均推荐）。\n\n");
+
+        sb.append("### 5.7.8.1 整体指标对比\n\n");
+        sb.append("| Mode | Avg Faithfulness | Avg Relevancy | Generation Failed | Judge Failed |\n");
+        sb.append("|---|---|---|---|---|\n");
+        sb.append("| **hybrid**（Plan E）| ").append(String.format("%.3f", hyb.overallAvgFaithfulness()))
+                .append(" | ").append(String.format("%.3f", hyb.overallAvgRelevancy()))
+                .append(" | ").append(hyb.getGenerationFailed())
+                .append(" | ").append(hyb.getJudgeFailed()).append(" |\n");
+        sb.append("| **hybrid+rerank**（Plan G）| ").append(String.format("%.3f", rer.overallAvgFaithfulness()))
+                .append(" | ").append(String.format("%.3f", rer.overallAvgRelevancy()))
+                .append(" | ").append(rer.getGenerationFailed())
+                .append(" | ").append(rer.getJudgeFailed()).append(" |\n");
+        sb.append("| **Δ**（hybrid+rerank − hybrid）| ")
+                .append(String.format("%+.3f", rer.overallAvgFaithfulness() - hyb.overallAvgFaithfulness()))
+                .append(" | **").append(String.format("%+.3f", rer.overallAvgRelevancy() - hyb.overallAvgRelevancy())).append("**")
+                .append(" | - | - |\n\n");
+
+        sb.append("### 5.7.8.2 按 Collection 分组对比\n\n");
+        sb.append("| Collection | Mode | Avg Faithfulness | Avg Relevancy | Δ Relevancy |\n");
+        sb.append("|---|---|---|---|---|\n");
+        for (String col : rer.collections()) {
+            GenerationReport.CollectionMetrics hm = hyb.getAggregated().get(col);
+            GenerationReport.CollectionMetrics rm = rer.getAggregated().get(col);
+            if (hm == null || rm == null) continue;
+            sb.append("| ").append(col).append(" | hybrid ")
+                    .append(" | ").append(String.format("%.3f", hm.avgFaithfulness))
+                    .append(" | ").append(String.format("%.3f", hm.avgRelevancy))
+                    .append(" | - |\n");
+            sb.append("| ").append(col).append(" | **hybrid+rerank** ")
+                    .append(" | ").append(String.format("%.3f", rm.avgFaithfulness))
+                    .append(" | ").append(String.format("%.3f", rm.avgRelevancy))
+                    .append(" | **").append(String.format("%+.3f", rm.avgRelevancy - hm.avgRelevancy)).append("** |\n");
+        }
+        sb.append("\n");
+
+        // 翻转 case：hybrid=false → rerank=true (rerank 真正修复的)
+        java.util.Map<Integer, Boolean> hMap = new java.util.HashMap<>();
+        for (GenerationReport.Detail d : hyb.getDetails()) {
+            hMap.put(d.queryId, d.relevant);
+        }
+        List<GenerationReport.Detail> uplifts = new java.util.ArrayList<>();
+        List<GenerationReport.Detail> regressions = new java.util.ArrayList<>();
+        for (GenerationReport.Detail d : rer.getDetails()) {
+            Boolean hRel = hMap.get(d.queryId);
+            if (hRel == null) continue;
+            if (!hRel && d.relevant) uplifts.add(d);
+            else if (hRel && !d.relevant) regressions.add(d);
+        }
+
+        sb.append("### 5.7.8.3 Reranker 修复的 query（hybrid ✗ → hybrid+rerank ✓）\n\n");
+        sb.append("> 这些是 cross-encoder 精排带来的真实增益——hybrid 召回了文档但顺序不优，rerank 把更相关的拉到前面。\n\n");
+        if (uplifts.isEmpty()) {
+            sb.append("（rerank 未带来任何 query 翻转——可能 rerank 调用失败、或 cross-encoder 在当前 doc 文本上区分度低）\n\n");
+        } else {
+            sb.append("| qid | collection | query | hybrid R | hybrid+rerank R |\n");
+            sb.append("|---|---|---|---|---|\n");
+            int shown = 0;
+            for (GenerationReport.Detail d : uplifts) {
+                if (shown >= 5) break;
+                sb.append("| ").append(d.queryId)
+                        .append(" | ").append(d.targetCollection.replace("_vector", ""))
+                        .append(" | ").append(escapeMd(truncate(d.query, 30)))
+                        .append(" | ✗ | ✓ |\n");
+                shown++;
+            }
+            if (uplifts.size() > 5) {
+                sb.append("\n_共 ").append(uplifts.size()).append(" 条 query 翻转（仅展示前 5 条）_\n");
+            }
+            sb.append("\n");
+        }
+
+        if (!regressions.isEmpty()) {
+            sb.append("### 5.7.8.4 Reranker 拉低的 query（hybrid ✓ → hybrid+rerank ✗）\n\n");
+            sb.append("> 这些 case 是 rerank 副作用——cross-encoder 评分把原本召回正确的 doc 排到 topK 外。\n");
+            sb.append("> 对应 doc 文本对 cross-encoder 不友好（如 shop 类只有结构化字段，没有自然语言描述）。\n\n");
+            sb.append("| qid | collection | query | hybrid R | hybrid+rerank R |\n");
+            sb.append("|---|---|---|---|---|\n");
+            int shown = 0;
+            for (GenerationReport.Detail d : regressions) {
+                if (shown >= 5) break;
+                sb.append("| ").append(d.queryId)
+                        .append(" | ").append(d.targetCollection.replace("_vector", ""))
+                        .append(" | ").append(escapeMd(truncate(d.query, 30)))
+                        .append(" | ✓ | ✗ |\n");
+                shown++;
+            }
+            if (regressions.size() > 5) {
+                sb.append("\n_共 ").append(regressions.size()).append(" 条 query 反向翻转（仅展示前 5 条）_\n");
             }
             sb.append("\n");
         }

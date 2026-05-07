@@ -5,6 +5,7 @@ import com.hmdp.ai.dto.KnowledgeHitDTO;
 import com.hmdp.ai.dto.ShopToolDTO;
 import com.hmdp.ai.rag.dto.EvalQuery;
 import com.hmdp.ai.rag.retriever.AiRagRetriever;
+import com.hmdp.ai.rag.retriever.Bge3Reranker;
 import com.hmdp.ai.rag.retriever.HybridRagRetriever;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Plan D：纯净 RAG 生成链路 —— query → AiRagRetriever 检索 → 拼 prompt → 业务 ChatModel 生成 answer。
@@ -63,11 +65,24 @@ public class RagAnswerGenerator {
     @Autowired(required = false)
     private HybridRagRetriever hybridRetriever;
 
+    /**
+     * Plan G 注入：cross-encoder reranker，rerank.enabled=false 时为 null（hybrid+rerank 模式自动降级回 hybrid）。
+     */
+    @Autowired(required = false)
+    private Bge3Reranker reranker;
+
     @Value("${rag.eval.generation.retrieval-mode:vector}")
-    private String retrievalMode;     // vector | hybrid
+    private String retrievalMode;     // vector | hybrid | hybrid+rerank
 
     @Value("${rag.eval.generation.top-k:5}")
     private int topK;
+
+    /**
+     * Plan G：hybrid+rerank 模式下，先用 hybrid 拿 fetchK 候选，再交 reranker 精排取 topK。
+     * fetchK 越大候选多样性越高但每次 rerank 调用越慢；20 是 cross-encoder 业界默认。
+     */
+    @Value("${rag.hybrid.fetch-k:20}")
+    private int rerankFetchK;
 
     @Value("${rag.eval.generation.generation-temperature:0.0}")
     private double generationTemperature;
@@ -124,28 +139,82 @@ public class RagAnswerGenerator {
 
     private List<String> retrieveContexts(EvalQuery q) {
         String collection = q.getTargetCollection();
-        boolean useHybrid = "hybrid".equalsIgnoreCase(retrievalMode) && hybridRetriever != null;
+        boolean useHybrid = ("hybrid".equalsIgnoreCase(retrievalMode)
+                || "hybrid+rerank".equalsIgnoreCase(retrievalMode)) && hybridRetriever != null;
+        boolean useRerank = "hybrid+rerank".equalsIgnoreCase(retrievalMode) && reranker != null && useHybrid;
+        // hybrid+rerank：拿 rerankFetchK (默认 20) 候选给 reranker 精排
+        int fetchK = useRerank ? rerankFetchK : topK;
         try {
-            return switch (collection) {
-                case "shop_profile_vector" -> formatShops(useHybrid
-                        ? hybridRetriever.hybridSearchShops(q.getQuery(), topK)
-                        : aiRagRetriever.searchShopProfiles(q.getQuery(), topK));
-                case "blog_review_vector" -> formatReviews(useHybrid
-                        ? hybridRetriever.hybridSearchReviews(q.getQuery(), topK)
-                        : aiRagRetriever.searchBlogReviews(q.getQuery(), topK));
-                case "knowledge_vector" -> formatKnowledge(useHybrid
-                        ? hybridRetriever.hybridSearchKnowledge(q.getQuery(), topK)
-                        : aiRagRetriever.searchKnowledge(q.getQuery()));
-                default -> {
-                    log.warn("[gen] unknown target_collection: {}", collection);
-                    yield List.of();
+            switch (collection) {
+                case "shop_profile_vector": {
+                    List<ShopToolDTO> hits = useHybrid
+                            ? hybridRetriever.hybridSearchShops(q.getQuery(), fetchK)
+                            : aiRagRetriever.searchShopProfiles(q.getQuery(), topK);
+                    if (useRerank) hits = applyRerank(q.getQuery(), hits, this::shopToText);
+                    return formatShops(hits);
                 }
-            };
+                case "blog_review_vector": {
+                    List<BlogVectorHitDTO> hits = useHybrid
+                            ? hybridRetriever.hybridSearchReviews(q.getQuery(), fetchK)
+                            : aiRagRetriever.searchBlogReviews(q.getQuery(), topK);
+                    if (useRerank) hits = applyRerank(q.getQuery(), hits, this::reviewToText);
+                    return formatReviews(hits);
+                }
+                case "knowledge_vector": {
+                    List<KnowledgeHitDTO> hits = useHybrid
+                            ? hybridRetriever.hybridSearchKnowledge(q.getQuery(), fetchK)
+                            : aiRagRetriever.searchKnowledge(q.getQuery());
+                    if (useRerank) hits = applyRerank(q.getQuery(), hits, this::knowledgeToText);
+                    return formatKnowledge(hits);
+                }
+                default:
+                    log.warn("[gen] unknown target_collection: {}", collection);
+                    return List.of();
+            }
         } catch (Exception e) {
             log.warn("[gen] retrieve failed for query_id={} target={} mode={}: {}",
-                    q.getQueryId(), collection, useHybrid ? "hybrid" : "vector", e.toString());
+                    q.getQueryId(), collection, retrievalMode, e.toString());
             return List.of();
         }
+    }
+
+    /**
+     * Plan G：调 reranker 精排，按返回的索引顺序重新组织 docs，截到 topK。
+     * Reranker 内部失败会返回 identity order（原序），所以这里不用单独 try/catch。
+     */
+    private <T> List<T> applyRerank(String query, List<T> docs, Function<T, String> textExtractor) {
+        if (docs == null || docs.size() <= 1) return docs;
+        List<String> texts = new ArrayList<>(docs.size());
+        for (T d : docs) texts.add(textExtractor.apply(d));
+        List<Integer> order = reranker.rerank(query, texts, topK);
+        List<T> out = new ArrayList<>(order.size());
+        for (Integer idx : order) {
+            if (idx >= 0 && idx < docs.size()) out.add(docs.get(idx));
+        }
+        return out;
+    }
+
+    /**
+     * 把 ShopToolDTO 拼成 cross-encoder 友好的自然语言描述（结构化字段串成短语）。
+     * 注意 ShopToolDTO 字段：name / area / address / avgPrice / rating（无 category 字段，typeId 是数字 cross-encoder 看不懂，跳过）
+     */
+    private String shopToText(ShopToolDTO s) {
+        StringBuilder sb = new StringBuilder();
+        if (s.getName() != null && !s.getName().isEmpty()) sb.append(s.getName()).append(' ');
+        if (s.getArea() != null && !s.getArea().isEmpty()) sb.append(s.getArea()).append(' ');
+        if (s.getAddress() != null && !s.getAddress().isEmpty()) sb.append(s.getAddress()).append(' ');
+        if (s.getAvgPrice() != null) sb.append("人均").append(s.getAvgPrice()).append("元 ");
+        if (s.getRating() != null) sb.append("评分").append(s.getRating()).append(' ');
+        if (s.getOpenHours() != null && !s.getOpenHours().isEmpty()) sb.append("营业时间 ").append(s.getOpenHours()).append(' ');
+        return sb.toString().trim();
+    }
+
+    private String reviewToText(BlogVectorHitDTO b) {
+        return b.getContent() == null ? "" : b.getContent();
+    }
+
+    private String knowledgeToText(KnowledgeHitDTO k) {
+        return k.getContent() == null ? "" : k.getContent();
     }
 
     /** Plan E：暴露当前模式，给 EvalRunnerTest 在双轮跑时可以临时切换 */

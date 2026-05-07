@@ -266,6 +266,7 @@ public class LlmJudge {
     private String buildBatchPrompt(String query, List<Document> docs) {
         StringBuilder sb = new StringBuilder(2048);
         sb.append("你是 RAG 系统的相关性裁判。对每个\"retrieved 文档\"判断是否能作为\"用户查询\"的相关上下文。\n\n");
+        sb.append("不要做搜索，不要说\"我会搜索\"，直接基于给出的信息评分。\n\n");
         sb.append("判断标准：\n");
         sb.append("1. 文档能直接或间接回答用户查询 → 相关\n");
         sb.append("2. 文档主题与查询完全无关 → 不相关\n");
@@ -338,6 +339,7 @@ public class LlmJudge {
             content = content.substring(0, docContentTruncate) + "...";
         }
         return "你是 RAG 系统的相关性裁判。判断\"retrieved 文档\"是否能作为\"用户查询\"的相关上下文。\n\n" +
+                "不要做搜索，不要说\"我会搜索\"，直接基于给出的信息评分。\n\n" +
                 "判断标准：\n" +
                 "1. retrieved 文档能直接或间接回答用户查询 → 相关\n" +
                 "2. 文档主题与查询完全无关 → 不相关\n" +

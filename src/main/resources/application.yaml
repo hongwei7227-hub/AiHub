@@ -147,10 +147,17 @@ rag:
       cache-enabled: true
       # 注意：Spring AI 的 OpenAiApi 默认 completionsPath=/v1/chat/completions，
       # base-url 不要带 /v1 后缀，否则会拼成双 /v1/v1 → 404
-      # copilot-api 反代（4141）的 model ID 用点号写法 claude-haiku-4.5（不是 Anthropic 官方的 dash）
-      base-url: ${LLM_JUDGE_BASE_URL:http://127.0.0.1:4141}
+      #
+      # Plan G：默认切 4647 + composer-2-fast
+      # 实测对照（20 query × 二元判断 100% 一致）：composer-2-fast 11.8s P50 / sonnet-4.5 17.7s P50
+      # 即 composer 与 sonnet 评分等价 + 速度快 47%。Plan F 全量评估用 sonnet 跑 73 分钟，估算 composer 38 分钟
+      # 关键：judge prompt 加"不要做搜索，不要说我会搜索，直接基于给出的信息评分"防御行（composer 是代码补全模型，没这一行会进搜索代码库模式）
+      # fallback 选项（环境变量 override）：
+      #   sonnet-4.5（4647）         → LLM_JUDGE_BASE_URL=http://127.0.0.1:4647 LLM_JUDGE_MODEL=sonnet-4.5 LLM_JUDGE_API_KEY=dummy
+      #   claude-haiku-4.5（4141）   → LLM_JUDGE_BASE_URL=http://127.0.0.1:4141 LLM_JUDGE_MODEL=claude-haiku-4.5 LLM_JUDGE_API_KEY=dummy
+      base-url: ${LLM_JUDGE_BASE_URL:http://127.0.0.1:4647}
       api-key: ${LLM_JUDGE_API_KEY:dummy}
-      model: ${LLM_JUDGE_MODEL:claude-haiku-4.5}
+      model: ${LLM_JUDGE_MODEL:composer-2-fast}
     # ===== Generation 层评估 (Plan D) =====
     # 业务模型 (Qwen2.5-7B) 生成 answer，judge 模型 (Claude Haiku 4.5) 评 faithfulness + relevancy
     # judge 模型复用 llm-judge.* 的 base-url/api-key/model（GenerationJudge lazy init 一份独立 ChatModel）
@@ -180,3 +187,18 @@ rag:
   hybrid:
     rrf-k: 60          # RRF 默认参数（业界标准）
     fetch-k: 20        # 每个 retriever 各拿 20，合并后取最终 topK
+
+  # Plan G: Cross-encoder Reranker（修复 hybrid 之后 shop relevancy 留在 0.350 的问题）
+  # 召回完 top-K 后用 BAAI/bge-reranker-v2-m3 对 (query, doc) 对精排，cross-encoder 评分
+  rerank:
+    # 默认 false 不影响业务启动；评估时 EvalRunnerTest properties 显式打开
+    enabled: ${RAG_RERANK_ENABLED:false}
+    # SiliconFlow rerank 端点（OpenAI / Cohere-style schema：POST /v1/rerank）
+    base-url: ${RAG_RERANK_BASE_URL:https://api.siliconflow.cn}
+    # 复用 spring.ai.openai.api-key（业务 Qwen / bge-m3 已在用此 key）
+    api-key: ${RAG_RERANK_API_KEY:${spring.ai.openai.api-key}}
+    model: ${RAG_RERANK_MODEL:BAAI/bge-reranker-v2-m3}
+    # 单次 rerank 调用超时，5 秒兜底
+    timeout-ms: ${RAG_RERANK_TIMEOUT_MS:5000}
+    # 失败重试次数（除首次调用，再试 N 次）
+    max-retries: ${RAG_RERANK_MAX_RETRIES:2}

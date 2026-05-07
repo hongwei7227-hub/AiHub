@@ -162,6 +162,7 @@ public class GenerationJudge {
 
     private String buildFaithPrompt(String answer, String contexts) {
         return "你是 RAG 系统的忠实度评分员。判断\"模型生成的答案\"是否完全被\"上下文片段\"支持，没有编造。\n\n" +
+                "不要做搜索，不要说\"我会搜索\"，直接基于给出的信息评分。\n\n" +
                 "打分标准（0.0~1.0）：\n" +
                 "- 1.0：答案中所有声明都能从上下文找到直接依据\n" +
                 "- 0.7：答案中绝大部分声明有依据，少量轻微推断（合理引申）\n" +
@@ -249,6 +250,7 @@ public class GenerationJudge {
 
     private String buildRelevancyPrompt(String query, String answer) {
         return "你是 RAG 系统的相关性评分员。判断\"模型生成的答案\"是否对\"用户问题\"直接回答。\n\n" +
+                "不要做搜索，不要说\"我会搜索\"，直接基于给出的信息评分。\n\n" +
                 "判断标准：\n" +
                 "- 直接回答用户问题（即使不完整也算）→ relevant=true\n" +
                 "- 答非所问 / 答了别的话题 → relevant=false\n" +
