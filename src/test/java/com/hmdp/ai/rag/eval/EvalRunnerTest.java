@@ -33,7 +33,11 @@ import java.util.Map;
         // Plan D 发现：业务 ai.agent.rag.similarity-threshold=0.65 对评估集所有 query 召回 0 → generation 全部"无法回答"。
         // 评估时降到 0.5 让 generation pipeline 能拿到 contexts；业务运行时仍用 0.65（这里只 override 测试 JVM）。
         // 这本身是 Plan D 的发现：业务 threshold 偏严，应该被记录到报告里
-        "ai.agent.rag.similarity-threshold=0.5"
+        "ai.agent.rag.similarity-threshold=0.5",
+        // Plan E：打开 BM25 索引 + Hybrid 包装层（@ConditionalOnProperty bean 才会注册）
+        "rag.bm25.enabled=true",
+        // 默认 hybrid 模式跑 generation；EvalRunnerTest.runFullEval 跑双轮时会临时切到 vector
+        "rag.eval.generation.retrieval-mode=hybrid"
 })
 class EvalRunnerTest {
 
@@ -95,23 +99,37 @@ class EvalRunnerTest {
         log.info("[llm-judge] done in {} ms (calls={}, failures={}, cacheSize={})",
                 ljElapsed, llmJudge.callCount(), llmJudge.failureCount(), llmJudge.cacheSize());
 
-        // 7.5 Plan D：跑 generation 层评估（faithfulness + answer_relevancy）
+        // 7.5 Plan D + Plan E：跑 generation 层评估两轮（vector baseline + hybrid）做对比
+        // Plan E 默认 retrieval-mode=hybrid；这里先临时切回 vector 跑 baseline，再切回 hybrid 跑主轮
         long genStart = System.currentTimeMillis();
-        log.info("[gen-eval] starting generation-layer evaluation (~{} business chat + {} judge calls)",
+        String originalMode = ragAnswerGenerator.getRetrievalMode();
+        log.info("[gen-eval] Plan E: dual-pass evaluation (vector baseline + hybrid main). Mode default={}", originalMode);
+
+        log.info("[gen-eval] PASS 1/2: vector baseline (~{} business chat + {} judge calls)",
                 queries.size(), queries.size() * 2);
+        ragAnswerGenerator.setRetrievalMode("vector");
+        GenerationReport vectorReport = generationEvaluator.evaluate(queries);
+        log.info("[gen-eval] vector baseline: avg faithfulness={}  avg relevancy={}",
+                String.format("%.3f", vectorReport.overallAvgFaithfulness()),
+                String.format("%.3f", vectorReport.overallAvgRelevancy()));
+
+        log.info("[gen-eval] PASS 2/2: hybrid (vector + BM25 + RRF)");
+        ragAnswerGenerator.setRetrievalMode("hybrid");
         GenerationReport genReport = generationEvaluator.evaluate(queries);
+        ragAnswerGenerator.setRetrievalMode(originalMode);   // 恢复
         long genElapsed = System.currentTimeMillis() - genStart;
-        log.info("[gen-eval] done in {} ms (judge calls={}, judge failures={}, gen failed={}, judge failed={})",
-                genElapsed, generationJudge.llmCallCount(), generationJudge.llmFailureCount(),
-                genReport.getGenerationFailed(), genReport.getJudgeFailed());
-        log.info("[gen-eval] avg faithfulness={}  avg relevancy={}",
+        log.info("[gen-eval] hybrid: avg faithfulness={}  avg relevancy={}",
                 String.format("%.3f", genReport.overallAvgFaithfulness()),
                 String.format("%.3f", genReport.overallAvgRelevancy()));
+        log.info("[gen-eval] PASS 1+2 done in {} ms (judge calls={}, judge failures={})",
+                genElapsed, generationJudge.llmCallCount(), generationJudge.llmFailureCount());
+        log.info("[gen-eval] Δ relevancy (hybrid - vector) = {}",
+                String.format("%+.3f", genReport.overallAvgRelevancy() - vectorReport.overallAvgRelevancy()));
 
-        // 8. 写 Markdown 报告（含 baseline + LLM-judge + generation 三套指标）
+        // 8. 写 Markdown 报告（含 baseline + LLM-judge + generation 三套指标 + Plan E 对比）
         long totalElapsed = elapsed + ljElapsed + genElapsed;
         Path reportPath = reportWriter.write(Path.of(outputDir), report, filterExp, failures,
-                genReport, queries.size(), totalElapsed);
+                genReport, vectorReport, queries.size(), totalElapsed);
 
         // 8.5 dump 每条 query 的 LLM-judge 详情（含 reason），UTF-8 JSON，方便 audit / 抽样
         String dateStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
