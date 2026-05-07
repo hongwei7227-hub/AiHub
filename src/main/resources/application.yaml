@@ -172,7 +172,7 @@ rag:
       context-truncate: 200          # 单条 context 字数上限
       contexts-total-truncate: 800   # 拼好的总 contexts 字数上限（faithfulness prompt 用）
       answer-truncate: 400           # answer 喂给 judge 时的字数上限
-      concurrency: 2                 # generation + judge 各自的并发度
+      concurrency: 5                 # Plan H：从 2 提到 5，配合 200 条 query 评估加速。4647 反代实测 5 并发稳定（max-retries 3 兜底）
       max-retries: 3
       retry-base-sleep-ms: 1000
       sample-detail-count: 8         # report 里 dump 几条详情
