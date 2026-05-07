@@ -1,9 +1,9 @@
 # RAG 召回评估报告
 
-- **生成时间**：2026-05-07T14:13:53.5454602
+- **生成时间**：2026-05-07T18:25:57.110077
 - **评估集**：50 条 query
 - **Embedding 模型**：BAAI/bge-m3 (1024 维)
-- **总耗时**：444.328 秒
+- **总耗时**：4350.242 秒
 
 ## 0. 评估范围声明
 
@@ -142,7 +142,7 @@
 
 ## 5.5 LLM-as-judge 评估结果
 
-> **Sanity check**：LLM-judge 总命中率（所有 query × 所有 retrieved doc 里判 true 的比例）= 16.3%
+> **Sanity check**：LLM-judge 总命中率（所有 query × 所有 retrieved doc 里判 true 的比例）= 12.4%
 > ⚠️ **超出 30%~70% 健康区间**——可能 judge 太宽松或 prompt 设计有 bug，结果需要谨慎解读
 > LLM 调用：50 次，失败 0（默认 false 兜底），缓存大小 380
 
@@ -150,9 +150,9 @@
 
 | Threshold | top-K | LLM-Precision@K | LLM-MRR | LLM-HitRate |
 |---|---|---|---|---|
-| 0.50 | 3 | 0.217 | 0.217 | 0.250 |
-| 0.50 | 5 | 0.217 | 0.217 | 0.250 |
-| 0.50 | 10 | 0.210 | 0.217 | 0.250 |
+| 0.50 | 3 | 0.200 | 0.200 | 0.200 |
+| 0.50 | 5 | 0.160 | 0.200 | 0.200 |
+| 0.50 | 10 | 0.159 | 0.200 | 0.200 |
 | 0.60 | 3 | 0.000 | 0.000 | 0.000 |
 | 0.60 | 5 | 0.000 | 0.000 | 0.000 |
 | 0.60 | 10 | 0.000 | 0.000 | 0.000 |
@@ -163,15 +163,15 @@
 | 0.70 | 5 | 0.000 | 0.000 | 0.000 |
 | 0.70 | 10 | 0.000 | 0.000 | 0.000 |
 
-**LLM-judge 最优配置（Precision+HitRate 加权最高）**：threshold=0.50, topK=3（Precision=0.217, HitRate=0.250）
+**LLM-judge 最优配置（Precision+HitRate 加权最高）**：threshold=0.50, topK=3（Precision=0.200, HitRate=0.200）
 
 ### 5.5.blog_review_vector (LLM-judge)
 
 | Threshold | top-K | LLM-Precision@K | LLM-MRR | LLM-HitRate |
 |---|---|---|---|---|
-| 0.50 | 3 | 0.083 | 0.150 | 0.150 |
-| 0.50 | 5 | 0.088 | 0.150 | 0.150 |
-| 0.50 | 10 | 0.088 | 0.150 | 0.150 |
+| 0.50 | 3 | 0.017 | 0.050 | 0.050 |
+| 0.50 | 5 | 0.013 | 0.050 | 0.050 |
+| 0.50 | 10 | 0.013 | 0.050 | 0.050 |
 | 0.60 | 3 | 0.050 | 0.050 | 0.050 |
 | 0.60 | 5 | 0.050 | 0.050 | 0.050 |
 | 0.60 | 10 | 0.050 | 0.050 | 0.050 |
@@ -182,7 +182,7 @@
 | 0.70 | 5 | 0.000 | 0.000 | 0.000 |
 | 0.70 | 10 | 0.000 | 0.000 | 0.000 |
 
-**LLM-judge 最优配置（Precision+HitRate 加权最高）**：threshold=0.50, topK=5（Precision=0.088, HitRate=0.150）
+**LLM-judge 最优配置（Precision+HitRate 加权最高）**：threshold=0.60, topK=3（Precision=0.050, HitRate=0.050）
 
 ### 5.5.knowledge_vector (LLM-judge)
 
@@ -190,7 +190,7 @@
 |---|---|---|---|---|
 | 0.50 | 3 | 0.367 | 1.000 | 1.000 |
 | 0.50 | 5 | 0.233 | 1.000 | 1.000 |
-| 0.50 | 10 | 0.137 | 1.000 | 1.000 |
+| 0.50 | 10 | 0.147 | 1.000 | 1.000 |
 | 0.60 | 3 | 0.550 | 1.000 | 1.000 |
 | 0.60 | 5 | 0.510 | 1.000 | 1.000 |
 | 0.60 | 10 | 0.484 | 1.000 | 1.000 |
@@ -226,8 +226,8 @@
 | 指标 | 值 |
 |---|---|
 | 总 query 数 | 50 |
-| 整体平均 Faithfulness | 0.724 |
-| 整体平均 Answer Relevancy | 0.600 |
+| 整体平均 Faithfulness | 0.692 |
+| 整体平均 Answer Relevancy | 0.420 |
 | Generation 失败数 | 0 |
 | Judge 失败数 | 0 |
 
@@ -235,9 +235,9 @@
 
 | Collection | Query 数 | Avg Faithfulness | Avg Relevancy | Gen Failed | Judge Failed |
 |---|---|---|---|---|---|
-| shop_profile_vector | 20 | 0.690 | 0.250 | 0 | 0 |
-| blog_review_vector | 20 | 0.620 | 0.750 | 0 | 0 |
-| knowledge_vector | 10 | 1.000 | 1.000 | 0 | 0 |
+| shop_profile_vector | 20 | 0.665 | 0.350 | 0 | 0 |
+| blog_review_vector | 20 | 0.670 | 0.400 | 0 | 0 |
+| knowledge_vector | 10 | 0.790 | 0.600 | 0 | 0 |
 
 ### 5.7.3 抽样详情（前 8 条）
 
@@ -245,36 +245,36 @@
 
 | qid | collection | query | answer | F | R | F-reason | R-reason |
 |---|---|---|---|---|---|---|---|
-| 1 | shop_profile | 杭州有什么好吃的杭帮菜 | 根据现有上下文，无法完整回答 | 0.70 | ✗ | 模型正确承认信息不足，未编造内容 | 兜底回复，未实际回答用户问题 |
-| 2 | shop_profile | 杭州的杭帮菜推荐 | 根据现有上下文，无法完整回答。上下文中提供的信息不足以确定哪家店铺是杭帮菜推荐。 | 0.70 | ✗ | 答案诚实承认信息不足，未编造内容，属… | 兜底回复，未提供实际推荐 |
-| 3 | shop_profile | 杭州有什么好吃的中餐 | - Mamala桥上塘丽 pestic港店  - 什么杭州第一猪肝面 | 0.40 | ✗ | 店铺名称有拼写错误和截断，地址信息混… | 答案表述混乱，未能清晰回答杭州中餐推… |
-| 4 | shop_profile | 杭州的中餐推荐 | Mamà（杭州远洋乐堤港店），外婆家 | 0.40 | ✓ | Mamala信息完整有依据；外婆家仅… | 直接推荐了杭州的两家中餐餐厅 |
-| 5 | shop_profile | 杭州有什么好吃的甜品 | 根据现有上下文，无法完整回答 | 0.70 | ✗ | 答案承认信息不足，未进行编造，属合理… | 兜底回复，未提供实质性答案 |
-| 6 | shop_profile | 杭州的甜品推荐 | 根据现有上下文，无法完整回答 | 0.70 | ✗ | 模型正确识别信息不足，承认局限性，未… | 兜底回复，未提供实质性推荐 |
-| 7 | shop_profile | 杭州有什么好吃的小吃 | 根据现有上下文，无法完整回答。提供的信息中没有直接提到小吃，只有几家店铺的信息。建议您查看店铺详情，可能会找到您感兴趣的… | 0.70 | ✗ | 答案承认信息不足，未编造内容，属合理… | 兜底回复，未实际回答用户问题 |
-| 8 | shop_profile | 杭州的小吃推荐 | 根据现有上下文，无法完整回答 | 0.70 | ✗ | 答案认可信息不足，属于合理兜底，不存… | 兜底回复，未提供任何实质性答案 |
+| 1 | shop_profile | 杭州有什么好吃的杭帮菜 | 根据现有上下文，无法完整回答。上下文中的信息主要涉及多个名为“楼外楼”的店铺，未提及杭帮菜的具体菜品。 | 0.70 | ✗ | 兜底回复，未编造，准确描述上下文 | 兜底回复未实际作答 |
+| 2 | shop_profile | 杭州的杭帮菜推荐 | 根据现有上下文，无法完整回答。上下文主要提及了多个名为“楼外楼”的店铺，未提供关于杭帮菜的信息。 | 0.70 | ✗ | 兜底回复且对上下文描述准确 | 未提供实质推荐，属兜底回复 |
+| 3 | shop_profile | 杭州有什么好吃的中餐 | - 楼外楼 - �炉鱼(拱墅万达广场店) - �蔡馬洪涛烤肉·老北京铜锅涮羊肉 | 1.00 | ✓ | 所有店铺名均在上下文中 | 列举了杭州中餐馆 |
+| 4 | shop_profile | 杭州的中餐推荐 | - 楼外楼（拱宸桥/上塘） - 蔡馬洪涛烤肉·老北京铜锅涮羊肉（拱宸桥/上塘/上塘路1035号） - 炉鱼(拱墅万达广场… | 0.40 | ✓ | 楼外楼位置信息编造，超出上下文 | 给出了具体餐厅推荐 |
+| 5 | shop_profile | 杭州有什么好吃的甜品 | - 安之秀菓  - - �星bucks（杭州远洋乐堤港店） | 0.40 | ✓ | 星巴克店铺位置信息无依据 | 提供了甜品店名 |
+| 6 | shop_profile | 杭州的甜品推荐 | 根据现有上下文，无法完整回答关于杭州甜品推荐的问题。提供的信息主要涉及餐厅和人均消费、评分等，未提及甜品相关信息。 | 0.70 | ✗ | 兜底回复，未编造，准确描述上下文 | 兜底回复，未实际回答 |
+| 7 | shop_profile | 杭州有什么好吃的小吃 | 根据现有上下文，无法完整回答。提供的信息主要涉及几家餐厅的地址、人均消费和评分，但没有具体提到它们的小吃种类。 | 1.00 | ✗ | 答案完全基于上下文，无编造 | 兜底回复，未实际回答 |
+| 8 | shop_profile | 杭州的小吃推荐 | - Mamala乐堤港店（人均60元，评分4.4） | 0.00 | ✓ | 人均价格和评分均与上下文不符 | 直接推荐了杭州餐厅 |
 
 ### 5.7.4 低 Faithfulness Case（潜在幻觉）
 
 > 这些 case 是 generation 层翻车的典型 —— retrieval 召回了内容，但模型答案脱离 contexts。
 
+**qid=8 / shop_profile_vector**  
+- Query: `杭州的小吃推荐`
+- Answer: `- Mamala乐堤港店（人均60元，评分4.4）`
+- Faithfulness: 0.00（reason: 人均价格和评分均与上下文不符）
+- Relevancy: ✓（reason: 直接推荐了杭州餐厅）
+
+**qid=12 / shop_profile_vector**  
+- Query: `适合家庭聚餐的中餐`
+- Answer: `- 外婆家：适合家庭聚餐的中餐选择。 - 炉鱼：适合家庭聚餐的中餐选择，但主要是火锅类型。 - 太兴：适合家庭聚餐的中餐选择。`
+- Faithfulness: 0.10（reason: 核心声明'适合家庭聚餐'完全编造）
+- Relevancy: ✓（reason: 直接推荐了中餐餐厅）
+
 **qid=33 / blog_review_vector**  
 - Query: `这家餐厅的东坡肉怎么样？`
-- Answer: `喜欢这家的东坡肉，每次必点。菜品精致，有食欲。服务稍慢。`
-- Faithfulness: 0.00（reason: 答案涉及的「东坡肉」、「菜品精致」、「服务稍慢」等内容在上下文中完全不存在，为编造信息。）
-- Relevancy: ✓（reason: 直接评价了东坡肉的品质和特点）
-
-**qid=3 / shop_profile_vector**  
-- Query: `杭州有什么好吃的中餐`
-- Answer: `- Mamala桥上塘丽 pestic港店  - 什么杭州第一猪肝面`
-- Faithfulness: 0.40（reason: 店铺名称有拼写错误和截断，地址信息混乱不清。第二个店铺完全正确。）
-- Relevancy: ✗（reason: 答案表述混乱，未能清晰回答杭州中餐推荐）
-
-**qid=4 / shop_profile_vector**  
-- Query: `杭州的中餐推荐`
-- Answer: `Mamà（杭州远洋乐堤港店），外婆家`
-- Faithfulness: 0.40（reason: Mamala信息完整有依据；外婆家仅店名有依据，无具体地址/价格/评分等信息）
-- Relevancy: ✓（reason: 直接推荐了杭州的两家中餐餐厅）
+- Answer: `味道不错，有点肥腻，但美味。`
+- Faithfulness: 0.30（reason: 与原文矛盾，评论明确说肥而不腻）
+- Relevancy: ✓（reason: 直接评价了东坡肉味道）
 
 ### 5.7.5 观察分析
 
@@ -297,19 +297,19 @@
 
 | Mode | Avg Faithfulness | Avg Relevancy | Generation Failed | Judge Failed |
 |---|---|---|---|---|
-| **vector**（Plan D 基线）| 0.767 | 0.280 | 0 | 0 |
-| **hybrid**（Plan E 修复）| 0.724 | 0.600 | 0 | 0 |
-| **Δ**（hybrid − vector）| -0.043 | **+0.320** | - | - |
+| **vector**（Plan D 基线）| 0.724 | 0.300 | 0 | 0 |
+| **hybrid**（Plan E 修复）| 0.720 | 0.720 | 0 | 0 |
+| **Δ**（hybrid − vector）| -0.004 | **+0.420** | - | - |
 
 ### 5.7.6.2 按 Collection 分组对比
 
 | Collection | Mode | Avg Faithfulness | Avg Relevancy | Δ Relevancy |
 |---|---|---|---|---|
-| shop_profile_vector | vector  | 0.718 | 0.200 | - |
-| shop_profile_vector | **hybrid**  | 0.690 | 0.250 | **+0.050** |
-| blog_review_vector | vector  | 0.700 | 0.000 | - |
-| blog_review_vector | **hybrid**  | 0.620 | 0.750 | **+0.750** |
-| knowledge_vector | vector  | 1.000 | 1.000 | - |
+| shop_profile_vector | vector  | 0.610 | 0.200 | - |
+| shop_profile_vector | **hybrid**  | 0.700 | 0.350 | **+0.150** |
+| blog_review_vector | vector  | 0.715 | 0.050 | - |
+| blog_review_vector | **hybrid**  | 0.600 | 0.950 | **+0.900** |
+| knowledge_vector | vector  | 0.970 | 1.000 | - |
 | knowledge_vector | **hybrid**  | 1.000 | 1.000 | **+0.000** |
 
 ### 5.7.6.3 hybrid 提升最大的 5 条 query
@@ -318,13 +318,66 @@
 
 | qid | collection | query | vector R | hybrid R | Δ |
 |---|---|---|---|---|---|
+| 3 | shop_profile | 杭州有什么好吃的中餐 | ✗  | ✓  | **+1** |
 | 4 | shop_profile | 杭州的中餐推荐 | ✗  | ✓  | **+1** |
-| 12 | shop_profile | 适合家庭聚餐的中餐 | ✗  | ✓  | **+1** |
+| 7 | shop_profile | 杭州有什么好吃的小吃 | ✗  | ✓  | **+1** |
 | 21 | blog_review | 银泰百货在哪里？ | ✗  | ✓  | **+1** |
-| 23 | blog_review | 杭州酒店打车难怎么办 | ✗  | ✓  | **+1** |
-| 24 | blog_review | 火车站附近哪里有卖鸭舌？ 鸭舌多少钱一斤？ 火车站附近哪家卖… | ✗  | ✓  | **+1** |
+| 22 | blog_review | 江浙菜适合请客吗？ | ✗  | ✓  | **+1** |
 
-_共 17 条 query 在 hybrid 模式下从 ✗ 翻转为 ✓（仅展示前 5 条）_
+_共 21 条 query 在 hybrid 模式下从 ✗ 翻转为 ✓（仅展示前 5 条）_
+
+## 5.7.7 Hybrid vs HyDE-Hybrid 对比（Plan F）
+
+> Plan E hybrid 把 review relevancy 从 0.00 拉到 0.75，但 shop 仍在 0.25。
+> 根因：shop 类 query 太宽泛（"杭州的中餐推荐"），BM25 关键词命中度低（"中餐"在很多店都出现，区分度差），
+> 向量召回又因 bge-m3 在"抽象意图 → 具体实例"上召回率低。
+> Plan F 上 **HyDE (Hypothetical Document Embedding)**：用业务 ChatModel (Qwen2.5-7B) 先编一个
+> "理想答案示例"，再用假想答案的 embedding 去检索。原理：抽象 query 和具体 doc 的 embedding 距离远，
+> 但假想答案和具体 doc 的 embedding 距离近（[Gao et al. 2022](https://arxiv.org/abs/2212.10496)）。
+>
+> **HyDE 不污染生成阶段**：检索时用假想答案的 embedding，但最终生成 prompt 里仍是用户原始 query。
+
+### 5.7.7.1 整体指标对比
+
+| Mode | Avg Faithfulness | Avg Relevancy | Generation Failed | Judge Failed |
+|---|---|---|---|---|
+| **hybrid**（Plan E）| 0.720 | 0.720 | 0 | 0 |
+| **hyde-hybrid**（Plan F）| 0.692 | 0.420 | 0 | 0 |
+| **Δ**（hyde-hybrid − hybrid）| -0.028 | **-0.300** | - | - |
+
+### 5.7.7.2 按 Collection 分组对比
+
+| Collection | Mode | Avg Faithfulness | Avg Relevancy | Δ Relevancy |
+|---|---|---|---|---|
+| shop_profile_vector | hybrid  | 0.700 | 0.350 | - |
+| shop_profile_vector | **hyde-hybrid**  | 0.665 | 0.350 | **+0.000** |
+| blog_review_vector | hybrid  | 0.600 | 0.950 | - |
+| blog_review_vector | **hyde-hybrid**  | 0.670 | 0.400 | **-0.550** |
+| knowledge_vector | hybrid  | 1.000 | 1.000 | - |
+| knowledge_vector | **hyde-hybrid**  | 0.790 | 0.600 | **-0.400** |
+
+### 5.7.7.3 HyDE 修复的 query（hybrid ✗ → hyde-hybrid ✓）
+
+> 这些是 HyDE 真正带来的增益——hybrid 没召回相关 doc 的 case，hyde 因为假想答案的语义靠近 doc 而成功。
+
+| qid | collection | query | hybrid R | hyde-hybrid R |
+|---|---|---|---|---|
+| 5 | shop_profile | 杭州有什么好吃的甜品 | ✗ | ✓ |
+| 8 | shop_profile | 杭州的小吃推荐 | ✗ | ✓ |
+
+### 5.7.7.4 HyDE 拉低的 query（hybrid ✓ → hyde-hybrid ✗）
+
+> HyDE 不是无副作用——假想答案如果偏离 query 真实语义，反而可能误导检索。
+
+| qid | collection | query | hybrid R | hyde-hybrid R |
+|---|---|---|---|---|
+| 7 | shop_profile | 杭州有什么好吃的小吃 | ✓ | ✗ |
+| 9 | shop_profile | 杭州有什么好吃的火锅 | ✓ | ✗ |
+| 21 | blog_review | 银泰百货在哪里？ | ✓ | ✗ |
+| 23 | blog_review | 杭州酒店打车难怎么办 | ✓ | ✗ |
+| 25 | blog_review | 烤肉和火锅哪种更好吃？ | ✓ | ✗ |
+
+_共 17 条 query 反向翻转（仅展示前 5 条）_
 
 ## 6. Failure Case 分析
 
