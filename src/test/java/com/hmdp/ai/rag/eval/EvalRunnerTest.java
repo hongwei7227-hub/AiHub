@@ -28,7 +28,12 @@ import java.util.Map;
 // @Disabled("Requires local MySQL/Redis/Milvus + API key. Run manually with -Dtest=EvalRunnerTest#runFullEval")
 @SpringBootTest(properties = {
         "ai.agent.bootstrap.enabled=false",
-        "rag.eval.llm-judge.enabled=true"
+        "rag.eval.llm-judge.enabled=true",
+        "rag.eval.generation.enabled=true",
+        // Plan D 发现：业务 ai.agent.rag.similarity-threshold=0.65 对评估集所有 query 召回 0 → generation 全部"无法回答"。
+        // 评估时降到 0.5 让 generation pipeline 能拿到 contexts；业务运行时仍用 0.65（这里只 override 测试 JVM）。
+        // 这本身是 Plan D 的发现：业务 threshold 偏严，应该被记录到报告里
+        "ai.agent.rag.similarity-threshold=0.5"
 })
 class EvalRunnerTest {
 
@@ -40,6 +45,9 @@ class EvalRunnerTest {
     @Autowired private JsonlReader jsonlReader;
     @Autowired private LlmJudgeEvaluator llmJudgeEvaluator;
     @Autowired private LlmJudge llmJudge;
+    @Autowired private GenerationEvaluator generationEvaluator;
+    @Autowired private RagAnswerGenerator ragAnswerGenerator;
+    @Autowired private GenerationJudge generationJudge;
 
     @Value("${rag.eval.thresholds}")        private List<Double> thresholds;
     @Value("${rag.eval.top-k-list}")        private List<Integer> topKList;
@@ -87,9 +95,23 @@ class EvalRunnerTest {
         log.info("[llm-judge] done in {} ms (calls={}, failures={}, cacheSize={})",
                 ljElapsed, llmJudge.callCount(), llmJudge.failureCount(), llmJudge.cacheSize());
 
-        // 8. 写 Markdown 报告（含 baseline + LLM-judge 双指标）
-        long totalElapsed = elapsed + ljElapsed;
-        Path reportPath = reportWriter.write(Path.of(outputDir), report, filterExp, failures, queries.size(), totalElapsed);
+        // 7.5 Plan D：跑 generation 层评估（faithfulness + answer_relevancy）
+        long genStart = System.currentTimeMillis();
+        log.info("[gen-eval] starting generation-layer evaluation (~{} business chat + {} judge calls)",
+                queries.size(), queries.size() * 2);
+        GenerationReport genReport = generationEvaluator.evaluate(queries);
+        long genElapsed = System.currentTimeMillis() - genStart;
+        log.info("[gen-eval] done in {} ms (judge calls={}, judge failures={}, gen failed={}, judge failed={})",
+                genElapsed, generationJudge.llmCallCount(), generationJudge.llmFailureCount(),
+                genReport.getGenerationFailed(), genReport.getJudgeFailed());
+        log.info("[gen-eval] avg faithfulness={}  avg relevancy={}",
+                String.format("%.3f", genReport.overallAvgFaithfulness()),
+                String.format("%.3f", genReport.overallAvgRelevancy()));
+
+        // 8. 写 Markdown 报告（含 baseline + LLM-judge + generation 三套指标）
+        long totalElapsed = elapsed + ljElapsed + genElapsed;
+        Path reportPath = reportWriter.write(Path.of(outputDir), report, filterExp, failures,
+                genReport, queries.size(), totalElapsed);
 
         // 8.5 dump 每条 query 的 LLM-judge 详情（含 reason），UTF-8 JSON，方便 audit / 抽样
         String dateStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -97,6 +119,80 @@ class EvalRunnerTest {
         log.info("[eval] 📋 LLM-judge 详情 (含 reason) 写到: {}", detailsPath);
         log.info("[eval] ✅ report written: {}", reportPath);
         log.info("[eval] 📋 NEXT STEP: 人工补完 failure case 报告里的'根因/改进方向'两栏，再 commit");
+    }
+
+    /**
+     * Plan D 独立入口：只跑 generation 层评估（不跑 retrieval / LLM-judge / filter / failure case）。
+     * 适合在 retrieval baseline 已有时单独迭代 generation 评估。
+     */
+    @Test
+    void runGenerationEval() throws Exception {
+        Path evalFile = Path.of(dataDir, "eval_queries.jsonl");
+        List<EvalQuery> queries = jsonlReader.readAll(evalFile, EvalQuery.class);
+        log.info("[gen-eval] standalone run, loaded {} eval queries", queries.size());
+
+        GenerationReport genReport = generationEvaluator.evaluate(queries);
+
+        log.info("=== Generation Eval Summary (standalone) ===");
+        log.info("Avg Faithfulness  : {}", String.format("%.3f", genReport.overallAvgFaithfulness()));
+        log.info("Avg Answer Relevancy: {}", String.format("%.3f", genReport.overallAvgRelevancy()));
+        log.info("Generation failed : {}", genReport.getGenerationFailed());
+        log.info("Judge failed      : {}", genReport.getJudgeFailed());
+        for (String col : genReport.collections()) {
+            GenerationReport.CollectionMetrics m = genReport.getAggregated().get(col);
+            log.info("[{}] n={} faith={} rel={} genFail={} judgeFail={}",
+                    col, m.queryCount,
+                    String.format("%.3f", m.avgFaithfulness),
+                    String.format("%.3f", m.avgRelevancy),
+                    m.generationFailed, m.judgeFailed);
+        }
+
+        // 控制台 dump 前 5 条详情
+        log.info("=== First 5 Generation Details ===");
+        genReport.getDetails().stream().limit(5).forEach(d ->
+                log.info("[qid={} {}] q={} | answer={} | F={} | R={} | F-reason={} | R-reason={}",
+                        d.queryId, d.targetCollection,
+                        truncate60(d.query), truncate60(d.answer),
+                        String.format("%.2f", d.faithfulness),
+                        d.relevant ? "✓" : "✗",
+                        d.faithReason, d.relevancyReason));
+    }
+
+    /**
+     * Plan D 小批量验证（Step 7.5）：跑前 5 条 query → generate + judge，控制台 dump 全部细节。
+     * 跑全量 #runGenerationEval 之前用这个验证：
+     *   1. RagAnswerGenerator 检索是否拿到 contexts（不全空）
+     *   2. Qwen2.5-7B 答案是否合理（不是英文/重复/空）
+     *   3. Haiku 4.5 的 score / relevant 标签是否合理
+     */
+    @Test
+    void smallBatchGenerationSample() throws Exception {
+        Path evalFile = Path.of(dataDir, "eval_queries.jsonl");
+        List<EvalQuery> queries = jsonlReader.readAll(evalFile, EvalQuery.class);
+        List<EvalQuery> sample = queries.subList(0, Math.min(5, queries.size()));
+        log.info("[gen-sample] loaded {} eval queries, sampling first {}", queries.size(), sample.size());
+
+        for (EvalQuery q : sample) {
+            log.info("---- qid={} target={} ----", q.getQueryId(), q.getTargetCollection());
+            log.info("Q: {}", q.getQuery());
+
+            RagAnswerGenerator.RagAnswerOutput out = ragAnswerGenerator.generate(q);
+            log.info("Contexts ({} retrieved, latency {} ms):", out.contextCount, out.retrievalLatencyMs);
+            log.info("  {}", truncate(out.contexts, 500));
+            log.info("Answer (latency {} ms): {}", out.generationLatencyMs, out.answer);
+
+            GenerationJudge.FaithResult faith = generationJudge.judgeFaithfulness(out.answer, out.contexts);
+            GenerationJudge.RelevancyResult rel = generationJudge.judgeAnswerRelevancy(q.getQuery(), out.answer);
+            log.info("Faithfulness: {} (reason: {})", String.format("%.2f", faith.score), faith.reason);
+            log.info("Relevancy:    {} (reason: {})", rel.relevant ? "✓ true" : "✗ false", rel.reason);
+        }
+        log.info("[gen-sample] 📋 人工抽 5 条对比：(a) contexts 不全空 (b) answer 合理 (c) judge 标签合理");
+    }
+
+    private static String truncate60(String s) { return truncate(s, 60); }
+    private static String truncate(String s, int max) {
+        if (s == null) return "";
+        return s.length() <= max ? s : s.substring(0, max) + "…";
     }
 
     /**

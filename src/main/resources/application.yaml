@@ -68,6 +68,8 @@ rocketmq:
   name-server: localhost:9876
   producer:
     group: hmdp-producer-group
+    # Plan E 压测：默认 3000ms 在 500 并发下会超时（broker 处理不过来），调到 30s
+    send-message-timeout: 30000
 
 ai:
   agent:
@@ -149,3 +151,20 @@ rag:
       base-url: ${LLM_JUDGE_BASE_URL:http://127.0.0.1:4141}
       api-key: ${LLM_JUDGE_API_KEY:dummy}
       model: ${LLM_JUDGE_MODEL:claude-haiku-4.5}
+    # ===== Generation 层评估 (Plan D) =====
+    # 业务模型 (Qwen2.5-7B) 生成 answer，judge 模型 (Claude Haiku 4.5) 评 faithfulness + relevancy
+    # judge 模型复用 llm-judge.* 的 base-url/api-key/model（GenerationJudge lazy init 一份独立 ChatModel）
+    generation:
+      # 默认 false：业务启动不会拉起 generation evaluator。EvalRunnerTest 用 properties 显式打开
+      enabled: ${RAG_EVAL_GENERATION_ENABLED:false}
+      top-k: 5                       # 喂给 generation 的 contexts 数量
+      generation-temperature: 0.0    # 业务 ChatModel 评估时降到 0，保证可重现
+      generation-max-tokens: 400     # 200 字答案够用
+      context-truncate: 200          # 单条 context 字数上限
+      contexts-total-truncate: 800   # 拼好的总 contexts 字数上限（faithfulness prompt 用）
+      answer-truncate: 400           # answer 喂给 judge 时的字数上限
+      concurrency: 2                 # generation + judge 各自的并发度
+      max-retries: 3
+      retry-base-sleep-ms: 1000
+      sample-detail-count: 8         # report 里 dump 几条详情
+      cache-enabled: true
