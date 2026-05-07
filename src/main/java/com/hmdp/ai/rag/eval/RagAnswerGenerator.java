@@ -64,7 +64,19 @@ public class RagAnswerGenerator {
     private HybridRagRetriever hybridRetriever;
 
     @Value("${rag.eval.generation.retrieval-mode:vector}")
-    private String retrievalMode;     // vector | hybrid
+    private String retrievalMode;     // vector | hybrid | hyde-hybrid
+
+    private static final String HYDE_PROMPT_TEMPLATE =
+            "假装你是杭州本地美食专家。针对下面的问题，给一个简短的「理想答案示例」（80 字内，可以编造店铺名/菜品/价格，但要符合现实）。\n" +
+            "\n" +
+            "要求：\n" +
+            "1. 不要解释，直接给答案示例\n" +
+            "2. 包含具体店铺名 + 地段 + 价格 + 招牌菜（如果适用）\n" +
+            "3. 80 字以内\n" +
+            "\n" +
+            "问题：{query}\n" +
+            "\n" +
+            "答案示例：";
 
     @Value("${rag.eval.generation.top-k:5}")
     private int topK;
@@ -125,17 +137,28 @@ public class RagAnswerGenerator {
     private List<String> retrieveContexts(EvalQuery q) {
         String collection = q.getTargetCollection();
         boolean useHybrid = "hybrid".equalsIgnoreCase(retrievalMode) && hybridRetriever != null;
+        boolean useHyde = "hyde-hybrid".equalsIgnoreCase(retrievalMode) && hybridRetriever != null;
+
+        // Plan F：HyDE 用业务 ChatModel 编一个"假想理想答案"，用它的 embedding 去检索（修复抽象 query → 具体 doc 的语义错配）
+        // 重要：retrievalQuery 只用于检索阶段；最终生成 answer 的 prompt 里仍是原 q.getQuery()，HyDE 不污染生成
+        String retrievalQuery = useHyde ? generateHypothetical(q) : q.getQuery();
+
         try {
+            if (useHybrid || useHyde) {
+                return switch (collection) {
+                    case "shop_profile_vector" -> formatShops(hybridRetriever.hybridSearchShops(retrievalQuery, topK));
+                    case "blog_review_vector" -> formatReviews(hybridRetriever.hybridSearchReviews(retrievalQuery, topK));
+                    case "knowledge_vector" -> formatKnowledge(hybridRetriever.hybridSearchKnowledge(retrievalQuery, topK));
+                    default -> {
+                        log.warn("[gen] unknown target_collection: {}", collection);
+                        yield List.of();
+                    }
+                };
+            }
             return switch (collection) {
-                case "shop_profile_vector" -> formatShops(useHybrid
-                        ? hybridRetriever.hybridSearchShops(q.getQuery(), topK)
-                        : aiRagRetriever.searchShopProfiles(q.getQuery(), topK));
-                case "blog_review_vector" -> formatReviews(useHybrid
-                        ? hybridRetriever.hybridSearchReviews(q.getQuery(), topK)
-                        : aiRagRetriever.searchBlogReviews(q.getQuery(), topK));
-                case "knowledge_vector" -> formatKnowledge(useHybrid
-                        ? hybridRetriever.hybridSearchKnowledge(q.getQuery(), topK)
-                        : aiRagRetriever.searchKnowledge(q.getQuery()));
+                case "shop_profile_vector" -> formatShops(aiRagRetriever.searchShopProfiles(q.getQuery(), topK));
+                case "blog_review_vector" -> formatReviews(aiRagRetriever.searchBlogReviews(q.getQuery(), topK));
+                case "knowledge_vector" -> formatKnowledge(aiRagRetriever.searchKnowledge(q.getQuery()));
                 default -> {
                     log.warn("[gen] unknown target_collection: {}", collection);
                     yield List.of();
@@ -143,8 +166,37 @@ public class RagAnswerGenerator {
             };
         } catch (Exception e) {
             log.warn("[gen] retrieve failed for query_id={} target={} mode={}: {}",
-                    q.getQueryId(), collection, useHybrid ? "hybrid" : "vector", e.toString());
+                    q.getQueryId(), collection, retrievalMode, e.toString());
             return List.of();
+        }
+    }
+
+    /**
+     * Plan F：HyDE - 让业务 ChatModel 生成一个假想理想答案，再用假想答案的 embedding 去检索。
+     * 比起原始 query，假想答案在语义空间更靠近真正的相关 doc（论文 Gao et al. 2022）。
+     * 失败兜底：返回原 query，不让 HyDE 故障导致整条 pipeline 挂掉。
+     */
+    private String generateHypothetical(EvalQuery q) {
+        String prompt = HYDE_PROMPT_TEMPLATE.replace("{query}", q.getQuery());
+        try {
+            OpenAiChatOptions options = OpenAiChatOptions.builder()
+                    .temperature(0.3)        // 给一点多样性，假想答案不能太死板
+                    .maxTokens(150)
+                    .build();
+            String text = businessChatModel.call(new Prompt(new UserMessage(prompt), options))
+                    .getResult().getOutput().getText();
+            String hyp = text == null ? "" : text.trim();
+            if (hyp.isEmpty()) {
+                log.warn("[hyde] empty hypothetical for query_id={} → fallback to original query", q.getQueryId());
+                return q.getQuery();
+            }
+            log.debug("[hyde] qid={} q='{}' → hyp='{}'",
+                    q.getQueryId(), truncate(q.getQuery(), 30), truncate(hyp, 80));
+            return hyp;
+        } catch (Exception e) {
+            log.warn("[hyde] failed for query_id={}: {} → fallback to original query",
+                    q.getQueryId(), e.toString());
+            return q.getQuery();
         }
     }
 

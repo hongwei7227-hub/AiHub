@@ -147,10 +147,15 @@ rag:
       cache-enabled: true
       # 注意：Spring AI 的 OpenAiApi 默认 completionsPath=/v1/chat/completions，
       # base-url 不要带 /v1 后缀，否则会拼成双 /v1/v1 → 404
-      # copilot-api 反代（4141）的 model ID 用点号写法 claude-haiku-4.5（不是 Anthropic 官方的 dash）
-      base-url: ${LLM_JUDGE_BASE_URL:http://127.0.0.1:4141}
+      #
+      # Plan F：默认切 4647 + sonnet-4.5
+      # 为什么换：4141 (Copilot Pro) 配额耗尽 (quota_exceeded)；4646 在 curl 通但 Spring AI RestClient 集成全部失败
+      # 4647 是另一路 cursor 反代，curl 测通且返回真实 token usage（说明协议实现更完整），用 dummy 即可（不像 4646 强制 not-needed）
+      # 模型名 sonnet-4.5 直接走 Cursor 订阅请求池，judge 质量比 Haiku 4.5 高
+      # fallback 到 4141：环境变量 LLM_JUDGE_BASE_URL=http://127.0.0.1:4141 LLM_JUDGE_MODEL=claude-haiku-4.5
+      base-url: ${LLM_JUDGE_BASE_URL:http://127.0.0.1:4647}
       api-key: ${LLM_JUDGE_API_KEY:dummy}
-      model: ${LLM_JUDGE_MODEL:claude-haiku-4.5}
+      model: ${LLM_JUDGE_MODEL:sonnet-4.5}
     # ===== Generation 层评估 (Plan D) =====
     # 业务模型 (Qwen2.5-7B) 生成 answer，judge 模型 (Claude Haiku 4.5) 评 faithfulness + relevancy
     # judge 模型复用 llm-judge.* 的 base-url/api-key/model（GenerationJudge lazy init 一份独立 ChatModel）

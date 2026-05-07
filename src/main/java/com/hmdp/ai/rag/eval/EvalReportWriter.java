@@ -63,6 +63,21 @@ public class EvalReportWriter {
                       GenerationReport generationReport,
                       GenerationReport vectorBaselineReport,
                       int queryCount, long elapsedMs) throws IOException {
+        return write(outputDir, report, filterExp, failures,
+                generationReport, vectorBaselineReport, null, queryCount, elapsedMs);
+    }
+
+    /**
+     * Plan F 重载：三 generation 报告（vector + hybrid + hyde-hybrid）。hydeReport != null 时
+     * Section 5.7 主表用 hyde-hybrid 数据，Section 5.7.7 加 hybrid vs hyde-hybrid 对比。
+     */
+    public Path write(Path outputDir, AggregatedReport report,
+                      FilterExperimentRunner.FilterExperimentResult filterExp,
+                      List<FailureCaseAnalyzer.FailureCase> failures,
+                      GenerationReport generationReport,           // 主表数据：Plan F 时 = hyde-hybrid，否则 = hybrid
+                      GenerationReport vectorBaselineReport,        // Plan E 5.7.6 用
+                      GenerationReport hydeReport,                  // Plan F 5.7.7 用，可 null
+                      int queryCount, long elapsedMs) throws IOException {
         Files.createDirectories(outputDir);
         String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         Path file = outputDir.resolve("rag_eval_report_" + dateStr + ".md");
@@ -83,11 +98,64 @@ public class EvalReportWriter {
             appendGenerationResults(sb, generationReport);   // Section 5.7（Plan D）
         }
         if (generationReport != null && vectorBaselineReport != null) {
-            appendVectorHybridComparison(sb, vectorBaselineReport, generationReport);   // Section 5.7.6（Plan E）
+            appendVectorHybridComparison(sb, vectorBaselineReport, generationReport);
         }
         appendFailureCases(sb, failures);
         if (report.hasLlmJudge()) {
             appendEvalSetReflection(sb);   // Section 6.5
+        }
+        appendObservations(sb, report, filterExp);
+        appendNextSteps(sb);
+        appendMethodologyRefs(sb);
+
+        Files.writeString(file, sb.toString(), StandardCharsets.UTF_8);
+        log.info("[report] written to {}", file);
+        return file;
+    }
+
+    /**
+     * Plan F 主入口：传 4 个 generation 报告（vector + hybrid + hyde-hybrid，主表用 hyde-hybrid）。
+     */
+    public Path writePlanF(Path outputDir, AggregatedReport report,
+                           FilterExperimentRunner.FilterExperimentResult filterExp,
+                           List<FailureCaseAnalyzer.FailureCase> failures,
+                           GenerationReport vectorReport,
+                           GenerationReport hybridReport,
+                           GenerationReport hydeReport,
+                           int queryCount, long elapsedMs) throws IOException {
+        Files.createDirectories(outputDir);
+        String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        Path file = outputDir.resolve("rag_eval_report_" + dateStr + ".md");
+
+        StringBuilder sb = new StringBuilder(8192);
+        appendHeader(sb, queryCount, elapsedMs);
+        appendScopeDeclaration(sb, hydeReport != null);
+        appendEvalConfig(sb, report);
+        if (report.hasLlmJudge()) {
+            appendDualMethodBoundaries(sb);
+        }
+        appendCollectionTables(sb, report);
+        appendFilterExperiment(sb, filterExp);
+        if (report.hasLlmJudge()) {
+            appendLlmJudgeResults(sb, report);
+        }
+        // 主表用 hyde-hybrid（Plan F 主成果）
+        if (hydeReport != null) {
+            appendGenerationResults(sb, hydeReport);
+        } else if (hybridReport != null) {
+            appendGenerationResults(sb, hybridReport);
+        }
+        // Section 5.7.6：vector vs hybrid（Plan E 既有对比，独立保留）
+        if (vectorReport != null && hybridReport != null) {
+            appendVectorHybridComparison(sb, vectorReport, hybridReport);
+        }
+        // Section 5.7.7：hybrid vs hyde-hybrid（Plan F 新增）
+        if (hybridReport != null && hydeReport != null) {
+            appendHydeComparison(sb, hybridReport, hydeReport);
+        }
+        appendFailureCases(sb, failures);
+        if (report.hasLlmJudge()) {
+            appendEvalSetReflection(sb);
         }
         appendObservations(sb, report, filterExp);
         appendNextSteps(sb);
@@ -610,6 +678,114 @@ public class EvalReportWriter {
             }
             if (uplifts.size() > 5) {
                 sb.append("\n_共 ").append(uplifts.size()).append(" 条 query 在 hybrid 模式下从 ✗ 翻转为 ✓（仅展示前 5 条）_\n");
+            }
+            sb.append("\n");
+        }
+    }
+
+    /**
+     * Plan F Section 5.7.7：hybrid vs hyde-hybrid 对比。
+     * Plan E hybrid 把 review 从 0 拉到 0.75，但 shop 仍在 0.25（query 太宽泛，BM25 关键词区分度差）。
+     * Plan F 上 HyDE：让业务 ChatModel 编"理想答案"再 embed，对齐"抽象 query"和"具体 doc"的语义空间。
+     */
+    private void appendHydeComparison(StringBuilder sb,
+                                       GenerationReport hyb,
+                                       GenerationReport hyd) {
+        sb.append("## 5.7.7 Hybrid vs HyDE-Hybrid 对比（Plan F）\n\n");
+        sb.append("> Plan E hybrid 把 review relevancy 从 0.00 拉到 0.75，但 shop 仍在 0.25。\n");
+        sb.append("> 根因：shop 类 query 太宽泛（\"杭州的中餐推荐\"），BM25 关键词命中度低（\"中餐\"在很多店都出现，区分度差），\n");
+        sb.append("> 向量召回又因 bge-m3 在\"抽象意图 → 具体实例\"上召回率低。\n");
+        sb.append("> Plan F 上 **HyDE (Hypothetical Document Embedding)**：用业务 ChatModel (Qwen2.5-7B) 先编一个\n");
+        sb.append("> \"理想答案示例\"，再用假想答案的 embedding 去检索。原理：抽象 query 和具体 doc 的 embedding 距离远，\n");
+        sb.append("> 但假想答案和具体 doc 的 embedding 距离近（[Gao et al. 2022](https://arxiv.org/abs/2212.10496)）。\n>\n");
+        sb.append("> **HyDE 不污染生成阶段**：检索时用假想答案的 embedding，但最终生成 prompt 里仍是用户原始 query。\n\n");
+
+        sb.append("### 5.7.7.1 整体指标对比\n\n");
+        sb.append("| Mode | Avg Faithfulness | Avg Relevancy | Generation Failed | Judge Failed |\n");
+        sb.append("|---|---|---|---|---|\n");
+        sb.append("| **hybrid**（Plan E）| ").append(String.format("%.3f", hyb.overallAvgFaithfulness()))
+                .append(" | ").append(String.format("%.3f", hyb.overallAvgRelevancy()))
+                .append(" | ").append(hyb.getGenerationFailed())
+                .append(" | ").append(hyb.getJudgeFailed()).append(" |\n");
+        sb.append("| **hyde-hybrid**（Plan F）| ").append(String.format("%.3f", hyd.overallAvgFaithfulness()))
+                .append(" | ").append(String.format("%.3f", hyd.overallAvgRelevancy()))
+                .append(" | ").append(hyd.getGenerationFailed())
+                .append(" | ").append(hyd.getJudgeFailed()).append(" |\n");
+        sb.append("| **Δ**（hyde-hybrid − hybrid）| ")
+                .append(String.format("%+.3f", hyd.overallAvgFaithfulness() - hyb.overallAvgFaithfulness()))
+                .append(" | **").append(String.format("%+.3f", hyd.overallAvgRelevancy() - hyb.overallAvgRelevancy())).append("**")
+                .append(" | - | - |\n\n");
+
+        sb.append("### 5.7.7.2 按 Collection 分组对比\n\n");
+        sb.append("| Collection | Mode | Avg Faithfulness | Avg Relevancy | Δ Relevancy |\n");
+        sb.append("|---|---|---|---|---|\n");
+        for (String col : hyd.collections()) {
+            GenerationReport.CollectionMetrics hm = hyb.getAggregated().get(col);
+            GenerationReport.CollectionMetrics dm = hyd.getAggregated().get(col);
+            if (hm == null || dm == null) continue;
+            sb.append("| ").append(col).append(" | hybrid ")
+                    .append(" | ").append(String.format("%.3f", hm.avgFaithfulness))
+                    .append(" | ").append(String.format("%.3f", hm.avgRelevancy))
+                    .append(" | - |\n");
+            sb.append("| ").append(col).append(" | **hyde-hybrid** ")
+                    .append(" | ").append(String.format("%.3f", dm.avgFaithfulness))
+                    .append(" | ").append(String.format("%.3f", dm.avgRelevancy))
+                    .append(" | **").append(String.format("%+.3f", dm.avgRelevancy - hm.avgRelevancy)).append("** |\n");
+        }
+        sb.append("\n");
+
+        // 找 hyde 修复的 query（hybrid=false，hyde=true）
+        sb.append("### 5.7.7.3 HyDE 修复的 query（hybrid ✗ → hyde-hybrid ✓）\n\n");
+        sb.append("> 这些是 HyDE 真正带来的增益——hybrid 没召回相关 doc 的 case，hyde 因为假想答案的语义靠近 doc 而成功。\n\n");
+
+        java.util.Map<Integer, Boolean> hMap = new java.util.HashMap<>();
+        for (GenerationReport.Detail d : hyb.getDetails()) {
+            hMap.put(d.queryId, d.relevant);
+        }
+        List<GenerationReport.Detail> uplifts = new java.util.ArrayList<>();
+        List<GenerationReport.Detail> regressions = new java.util.ArrayList<>();
+        for (GenerationReport.Detail d : hyd.getDetails()) {
+            Boolean hRel = hMap.get(d.queryId);
+            if (hRel == null) continue;
+            if (!hRel && d.relevant) uplifts.add(d);
+            else if (hRel && !d.relevant) regressions.add(d);
+        }
+        if (uplifts.isEmpty()) {
+            sb.append("（hyde-hybrid 未带来任何 query 翻转，HyDE 无增量收益——可能假想答案质量低或 query 性质不适合）\n\n");
+        } else {
+            sb.append("| qid | collection | query | hybrid R | hyde-hybrid R |\n");
+            sb.append("|---|---|---|---|---|\n");
+            int shown = 0;
+            for (GenerationReport.Detail d : uplifts) {
+                if (shown >= 5) break;
+                sb.append("| ").append(d.queryId)
+                        .append(" | ").append(d.targetCollection.replace("_vector", ""))
+                        .append(" | ").append(escapeMd(truncate(d.query, 30)))
+                        .append(" | ✗ | ✓ |\n");
+                shown++;
+            }
+            if (uplifts.size() > 5) {
+                sb.append("\n_共 ").append(uplifts.size()).append(" 条 query 翻转（仅展示前 5 条）_\n");
+            }
+            sb.append("\n");
+        }
+
+        if (!regressions.isEmpty()) {
+            sb.append("### 5.7.7.4 HyDE 拉低的 query（hybrid ✓ → hyde-hybrid ✗）\n\n");
+            sb.append("> HyDE 不是无副作用——假想答案如果偏离 query 真实语义，反而可能误导检索。\n\n");
+            sb.append("| qid | collection | query | hybrid R | hyde-hybrid R |\n");
+            sb.append("|---|---|---|---|---|\n");
+            int shown = 0;
+            for (GenerationReport.Detail d : regressions) {
+                if (shown >= 5) break;
+                sb.append("| ").append(d.queryId)
+                        .append(" | ").append(d.targetCollection.replace("_vector", ""))
+                        .append(" | ").append(escapeMd(truncate(d.query, 30)))
+                        .append(" | ✓ | ✗ |\n");
+                shown++;
+            }
+            if (regressions.size() > 5) {
+                sb.append("\n_共 ").append(regressions.size()).append(" 条 query 反向翻转（仅展示前 5 条）_\n");
             }
             sb.append("\n");
         }

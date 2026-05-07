@@ -99,13 +99,13 @@ class EvalRunnerTest {
         log.info("[llm-judge] done in {} ms (calls={}, failures={}, cacheSize={})",
                 ljElapsed, llmJudge.callCount(), llmJudge.failureCount(), llmJudge.cacheSize());
 
-        // 7.5 Plan D + Plan E：跑 generation 层评估两轮（vector baseline + hybrid）做对比
-        // Plan E 默认 retrieval-mode=hybrid；这里先临时切回 vector 跑 baseline，再切回 hybrid 跑主轮
+        // 7.5 Plan D + Plan E + Plan F：跑 generation 层评估三轮（vector baseline + hybrid + hyde-hybrid）做对比
+        // Plan F 默认 retrieval-mode=hybrid；这里依次切到 vector / hybrid / hyde-hybrid
         long genStart = System.currentTimeMillis();
         String originalMode = ragAnswerGenerator.getRetrievalMode();
-        log.info("[gen-eval] Plan E: dual-pass evaluation (vector baseline + hybrid main). Mode default={}", originalMode);
+        log.info("[gen-eval] Plan F: triple-pass evaluation (vector + hybrid + hyde-hybrid). Mode default={}", originalMode);
 
-        log.info("[gen-eval] PASS 1/2: vector baseline (~{} business chat + {} judge calls)",
+        log.info("[gen-eval] PASS 1/3: vector baseline (~{} business chat + {} judge calls)",
                 queries.size(), queries.size() * 2);
         ragAnswerGenerator.setRetrievalMode("vector");
         GenerationReport vectorReport = generationEvaluator.evaluate(queries);
@@ -113,23 +113,32 @@ class EvalRunnerTest {
                 String.format("%.3f", vectorReport.overallAvgFaithfulness()),
                 String.format("%.3f", vectorReport.overallAvgRelevancy()));
 
-        log.info("[gen-eval] PASS 2/2: hybrid (vector + BM25 + RRF)");
+        log.info("[gen-eval] PASS 2/3: hybrid (vector + BM25 + RRF)");
         ragAnswerGenerator.setRetrievalMode("hybrid");
-        GenerationReport genReport = generationEvaluator.evaluate(queries);
+        GenerationReport hybridReport = generationEvaluator.evaluate(queries);
+        log.info("[gen-eval] hybrid: avg faithfulness={}  avg relevancy={}",
+                String.format("%.3f", hybridReport.overallAvgFaithfulness()),
+                String.format("%.3f", hybridReport.overallAvgRelevancy()));
+
+        log.info("[gen-eval] PASS 3/3: hyde-hybrid (HyDE → hybrid)");
+        ragAnswerGenerator.setRetrievalMode("hyde-hybrid");
+        GenerationReport hydeReport = generationEvaluator.evaluate(queries);
         ragAnswerGenerator.setRetrievalMode(originalMode);   // 恢复
         long genElapsed = System.currentTimeMillis() - genStart;
-        log.info("[gen-eval] hybrid: avg faithfulness={}  avg relevancy={}",
-                String.format("%.3f", genReport.overallAvgFaithfulness()),
-                String.format("%.3f", genReport.overallAvgRelevancy()));
-        log.info("[gen-eval] PASS 1+2 done in {} ms (judge calls={}, judge failures={})",
+        log.info("[gen-eval] hyde-hybrid: avg faithfulness={}  avg relevancy={}",
+                String.format("%.3f", hydeReport.overallAvgFaithfulness()),
+                String.format("%.3f", hydeReport.overallAvgRelevancy()));
+        log.info("[gen-eval] PASS 1+2+3 done in {} ms (judge calls={}, judge failures={})",
                 genElapsed, generationJudge.llmCallCount(), generationJudge.llmFailureCount());
         log.info("[gen-eval] Δ relevancy (hybrid - vector) = {}",
-                String.format("%+.3f", genReport.overallAvgRelevancy() - vectorReport.overallAvgRelevancy()));
+                String.format("%+.3f", hybridReport.overallAvgRelevancy() - vectorReport.overallAvgRelevancy()));
+        log.info("[gen-eval] Δ relevancy (hyde-hybrid - hybrid) = {}",
+                String.format("%+.3f", hydeReport.overallAvgRelevancy() - hybridReport.overallAvgRelevancy()));
 
-        // 8. 写 Markdown 报告（含 baseline + LLM-judge + generation 三套指标 + Plan E 对比）
+        // 8. 写 Markdown 报告（含 baseline + LLM-judge + generation 三套指标 + Plan E + Plan F 对比）
         long totalElapsed = elapsed + ljElapsed + genElapsed;
-        Path reportPath = reportWriter.write(Path.of(outputDir), report, filterExp, failures,
-                genReport, vectorReport, queries.size(), totalElapsed);
+        Path reportPath = reportWriter.writePlanF(Path.of(outputDir), report, filterExp, failures,
+                vectorReport, hybridReport, hydeReport, queries.size(), totalElapsed);
 
         // 8.5 dump 每条 query 的 LLM-judge 详情（含 reason），UTF-8 JSON，方便 audit / 抽样
         String dateStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
