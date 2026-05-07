@@ -38,6 +38,18 @@ public class EvalReportWriter {
                       FilterExperimentRunner.FilterExperimentResult filterExp,
                       List<FailureCaseAnalyzer.FailureCase> failures,
                       int queryCount, long elapsedMs) throws IOException {
+        return write(outputDir, report, filterExp, failures, null, queryCount, elapsedMs);
+    }
+
+    /**
+     * Plan D 重载：多了 {@code generationReport} 参数（可以是 null —— 仅跑 retrieval 时不传）。
+     * 不为 null 时在 Section 5.5 之后追加 Section 5.7（generation 层评估）。
+     */
+    public Path write(Path outputDir, AggregatedReport report,
+                      FilterExperimentRunner.FilterExperimentResult filterExp,
+                      List<FailureCaseAnalyzer.FailureCase> failures,
+                      GenerationReport generationReport,
+                      int queryCount, long elapsedMs) throws IOException {
         Files.createDirectories(outputDir);
         String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         Path file = outputDir.resolve("rag_eval_report_" + dateStr + ".md");
@@ -53,6 +65,9 @@ public class EvalReportWriter {
         appendFilterExperiment(sb, filterExp);
         if (report.hasLlmJudge()) {
             appendLlmJudgeResults(sb, report);   // Section 5.5
+        }
+        if (generationReport != null) {
+            appendGenerationResults(sb, generationReport);   // Section 5.7（Plan D）
         }
         appendFailureCases(sb, failures);
         if (report.hasLlmJudge()) {
@@ -395,5 +410,107 @@ public class EvalReportWriter {
 
     private String safeStr(String s) {
         return s == null ? "" : s;
+    }
+
+    /**
+     * Plan D Section 5.7：generation 层评估（faithfulness + answer_relevancy）。
+     */
+    private void appendGenerationResults(StringBuilder sb, GenerationReport gen) {
+        sb.append("## 5.7 Generation 层评估（Plan D：Faithfulness + Answer Relevancy）\n\n");
+        sb.append("> 对照 [Ragas](https://github.com/explodinggradients/ragas) 两层框架的 generation 层。\n");
+        sb.append("> **业务模型生成**（Qwen2.5-7B-Instruct，temperature=0），**judge 模型评估**（Claude Haiku 4.5）——\n");
+        sb.append("> 评估器和被评估者严格分离，避免自己评自己。\n>\n");
+        sb.append("> 两个指标：\n");
+        sb.append("> - **Faithfulness**（0~1）：answer 是否被 retrieved contexts 支持。低 = 模型在编（幻觉）\n");
+        sb.append("> - **Answer Relevancy**（0/1）：answer 是否对 query 直接回答。低 = 答非所问\n\n");
+
+        // 5.7.1 总览
+        sb.append("### 5.7.1 总览\n\n");
+        sb.append("| 指标 | 值 |\n|---|---|\n");
+        sb.append("| 总 query 数 | ").append(gen.totalCount()).append(" |\n");
+        sb.append("| 整体平均 Faithfulness | ").append(String.format("%.3f", gen.overallAvgFaithfulness())).append(" |\n");
+        sb.append("| 整体平均 Answer Relevancy | ").append(String.format("%.3f", gen.overallAvgRelevancy())).append(" |\n");
+        sb.append("| Generation 失败数 | ").append(gen.getGenerationFailed()).append(" |\n");
+        sb.append("| Judge 失败数 | ").append(gen.getJudgeFailed()).append(" |\n\n");
+
+        // 5.7.2 按 collection 聚合
+        sb.append("### 5.7.2 按 Collection 聚合\n\n");
+        sb.append("| Collection | Query 数 | Avg Faithfulness | Avg Relevancy | Gen Failed | Judge Failed |\n");
+        sb.append("|---|---|---|---|---|---|\n");
+        for (String collection : gen.collections()) {
+            GenerationReport.CollectionMetrics m = gen.getAggregated().get(collection);
+            sb.append("| ").append(collection)
+                    .append(" | ").append(m.queryCount)
+                    .append(" | ").append(String.format("%.3f", m.avgFaithfulness))
+                    .append(" | ").append(String.format("%.3f", m.avgRelevancy))
+                    .append(" | ").append(m.generationFailed)
+                    .append(" | ").append(m.judgeFailed)
+                    .append(" |\n");
+        }
+        sb.append("\n");
+
+        // 5.7.3 抽样详情：前 N 条 + 低分 case
+        int sampleN = 8;
+        List<GenerationReport.Detail> details = gen.getDetails();
+        sb.append("### 5.7.3 抽样详情（前 ").append(Math.min(sampleN, details.size())).append(" 条）\n\n");
+        sb.append("> 完整 ").append(details.size()).append(" 条详情见 ");
+        sb.append("`docs/rag_eval_generation_details_<日期>.json`（如导出）。\n\n");
+        sb.append("| qid | collection | query | answer | F | R | F-reason | R-reason |\n");
+        sb.append("|---|---|---|---|---|---|---|---|\n");
+        int shown = 0;
+        for (GenerationReport.Detail d : details) {
+            if (shown >= sampleN) break;
+            sb.append("| ").append(d.queryId)
+                    .append(" | ").append(d.targetCollection.replace("_vector", ""))
+                    .append(" | ").append(escapeMd(truncate(d.query, 28)))
+                    .append(" | ").append(escapeMd(truncate(d.answer, 60)))
+                    .append(" | ").append(String.format("%.2f", d.faithfulness))
+                    .append(" | ").append(d.relevant ? "✓" : "✗")
+                    .append(" | ").append(escapeMd(truncate(d.faithReason, 18)))
+                    .append(" | ").append(escapeMd(truncate(d.relevancyReason, 18)))
+                    .append(" |\n");
+            shown++;
+        }
+        sb.append("\n");
+
+        // 5.7.4 低分 case
+        List<GenerationReport.Detail> lowFaith = details.stream()
+                .filter(d -> d.faithfulness < 0.5 && d.answer != null && !d.answer.isBlank())
+                .sorted((a, b) -> Double.compare(a.faithfulness, b.faithfulness))
+                .limit(3)
+                .toList();
+        if (!lowFaith.isEmpty()) {
+            sb.append("### 5.7.4 低 Faithfulness Case（潜在幻觉）\n\n");
+            sb.append("> 这些 case 是 generation 层翻车的典型 —— retrieval 召回了内容，但模型答案脱离 contexts。\n\n");
+            for (GenerationReport.Detail d : lowFaith) {
+                sb.append("**qid=").append(d.queryId).append(" / ").append(d.targetCollection).append("**  \n");
+                sb.append("- Query: `").append(escapeMd(d.query)).append("`\n");
+                sb.append("- Answer: `").append(escapeMd(truncate(d.answer, 200))).append("`\n");
+                sb.append("- Faithfulness: ").append(String.format("%.2f", d.faithfulness))
+                        .append("（reason: ").append(escapeMd(d.faithReason)).append("）\n");
+                sb.append("- Relevancy: ").append(d.relevant ? "✓" : "✗")
+                        .append("（reason: ").append(escapeMd(d.relevancyReason)).append("）\n\n");
+            }
+        }
+
+        // 5.7.5 观察分析模板
+        sb.append("### 5.7.5 观察分析\n\n");
+        sb.append("分层评估框架下，将 retrieval 指标 + generation 指标交叉，可以定位失败根因：\n\n");
+        sb.append("| 模式 | retrieval | generation | 含义 |\n");
+        sb.append("|---|---|---|---|\n");
+        sb.append("| 健康 | 高 | 高 | 召回好 + 模型用得好 |\n");
+        sb.append("| 模型幻觉 | 高 | 低 | 召回正确但模型脱离 contexts 编造 → 调 generation prompt / 升级模型 |\n");
+        sb.append("| 召回不足 | 低 | 高 | 召回少但模型靠常识答（不算 RAG 闭环）→ 提升 retrieval 召回率 |\n");
+        sb.append("| 双低 | 低 | 低 | query 难度大或 ground truth 缺失 → 评估集设计问题 |\n\n");
+    }
+
+    private static String truncate(String s, int max) {
+        if (s == null) return "";
+        return s.length() <= max ? s : s.substring(0, max) + "…";
+    }
+
+    private static String escapeMd(String s) {
+        if (s == null) return "";
+        return s.replace("|", "\\|").replace("\n", " ").replace("\r", " ");
     }
 }
