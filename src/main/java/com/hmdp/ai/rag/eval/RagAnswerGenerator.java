@@ -5,6 +5,7 @@ import com.hmdp.ai.dto.KnowledgeHitDTO;
 import com.hmdp.ai.dto.ShopToolDTO;
 import com.hmdp.ai.rag.dto.EvalQuery;
 import com.hmdp.ai.rag.retriever.AiRagRetriever;
+import com.hmdp.ai.rag.retriever.HybridRagRetriever;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,7 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -54,6 +56,15 @@ public class RagAnswerGenerator {
 
     private final ChatModel businessChatModel;     // 业务 autoconfigured ChatModel = Qwen2.5-7B
     private final AiRagRetriever aiRagRetriever;
+
+    /**
+     * Plan E 注入：hybrid 模式下用，bm25.enabled=false 时为 null（自动 fallback 到 vector 模式）。
+     */
+    @Autowired(required = false)
+    private HybridRagRetriever hybridRetriever;
+
+    @Value("${rag.eval.generation.retrieval-mode:vector}")
+    private String retrievalMode;     // vector | hybrid
 
     @Value("${rag.eval.generation.top-k:5}")
     private int topK;
@@ -113,21 +124,37 @@ public class RagAnswerGenerator {
 
     private List<String> retrieveContexts(EvalQuery q) {
         String collection = q.getTargetCollection();
+        boolean useHybrid = "hybrid".equalsIgnoreCase(retrievalMode) && hybridRetriever != null;
         try {
             return switch (collection) {
-                case "shop_profile_vector" -> formatShops(aiRagRetriever.searchShopProfiles(q.getQuery(), topK));
-                case "blog_review_vector" -> formatReviews(aiRagRetriever.searchBlogReviews(q.getQuery(), topK));
-                case "knowledge_vector" -> formatKnowledge(aiRagRetriever.searchKnowledge(q.getQuery()));
+                case "shop_profile_vector" -> formatShops(useHybrid
+                        ? hybridRetriever.hybridSearchShops(q.getQuery(), topK)
+                        : aiRagRetriever.searchShopProfiles(q.getQuery(), topK));
+                case "blog_review_vector" -> formatReviews(useHybrid
+                        ? hybridRetriever.hybridSearchReviews(q.getQuery(), topK)
+                        : aiRagRetriever.searchBlogReviews(q.getQuery(), topK));
+                case "knowledge_vector" -> formatKnowledge(useHybrid
+                        ? hybridRetriever.hybridSearchKnowledge(q.getQuery(), topK)
+                        : aiRagRetriever.searchKnowledge(q.getQuery()));
                 default -> {
                     log.warn("[gen] unknown target_collection: {}", collection);
                     yield List.of();
                 }
             };
         } catch (Exception e) {
-            log.warn("[gen] retrieve failed for query_id={} target={}: {}",
-                    q.getQueryId(), collection, e.toString());
+            log.warn("[gen] retrieve failed for query_id={} target={} mode={}: {}",
+                    q.getQueryId(), collection, useHybrid ? "hybrid" : "vector", e.toString());
             return List.of();
         }
+    }
+
+    /** Plan E：暴露当前模式，给 EvalRunnerTest 在双轮跑时可以临时切换 */
+    public String getRetrievalMode() {
+        return retrievalMode;
+    }
+
+    public void setRetrievalMode(String mode) {
+        this.retrievalMode = mode;
     }
 
     private List<String> formatShops(List<ShopToolDTO> shops) {

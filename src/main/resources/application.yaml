@@ -157,6 +157,8 @@ rag:
     generation:
       # 默认 false：业务启动不会拉起 generation evaluator。EvalRunnerTest 用 properties 显式打开
       enabled: ${RAG_EVAL_GENERATION_ENABLED:false}
+      # Plan E: retrieval mode 切换。vector=纯向量（Plan D 默认），hybrid=向量+BM25 RRF 合并
+      retrieval-mode: ${RAG_EVAL_RETRIEVAL_MODE:hybrid}
       top-k: 5                       # 喂给 generation 的 contexts 数量
       generation-temperature: 0.0    # 业务 ChatModel 评估时降到 0，保证可重现
       generation-max-tokens: 400     # 200 字答案够用
@@ -168,3 +170,13 @@ rag:
       retry-base-sleep-ms: 1000
       sample-detail-count: 8         # report 里 dump 几条详情
       cache-enabled: true
+
+  # Plan E: BM25 + Hybrid Search（修复 generation relevancy 0.28）
+  bm25:
+    # 默认 false 不影响业务启动；评估时 EvalRunnerTest properties 显式打开
+    enabled: ${RAG_BM25_ENABLED:false}
+    # JSONL 数据来源（与 rag.ingest.data-dir 一致，但 BM25 索引独立从文件读，不依赖 Milvus）
+    data-dir: ${RAG_BM25_DATA_DIR:F:/project/hm-dianping-data-prep/output}
+  hybrid:
+    rrf-k: 60          # RRF 默认参数（业界标准）
+    fetch-k: 20        # 每个 retriever 各拿 20，合并后取最终 topK

@@ -50,13 +50,26 @@ public class EvalReportWriter {
                       List<FailureCaseAnalyzer.FailureCase> failures,
                       GenerationReport generationReport,
                       int queryCount, long elapsedMs) throws IOException {
+        return write(outputDir, report, filterExp, failures, generationReport, null, queryCount, elapsedMs);
+    }
+
+    /**
+     * Plan E 重载：双 generation 报告（vector + hybrid）—— hybridReport != null 时在 Section 5.7
+     * 之后追加 Section 5.7.6（vector vs hybrid 对比）。Section 5.7 主表用 hybrid 数据。
+     */
+    public Path write(Path outputDir, AggregatedReport report,
+                      FilterExperimentRunner.FilterExperimentResult filterExp,
+                      List<FailureCaseAnalyzer.FailureCase> failures,
+                      GenerationReport generationReport,
+                      GenerationReport vectorBaselineReport,
+                      int queryCount, long elapsedMs) throws IOException {
         Files.createDirectories(outputDir);
         String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         Path file = outputDir.resolve("rag_eval_report_" + dateStr + ".md");
 
         StringBuilder sb = new StringBuilder(8192);
         appendHeader(sb, queryCount, elapsedMs);
-        appendScopeDeclaration(sb);
+        appendScopeDeclaration(sb, generationReport != null);
         appendEvalConfig(sb, report);
         if (report.hasLlmJudge()) {
             appendDualMethodBoundaries(sb);   // Section 1.5
@@ -68,6 +81,9 @@ public class EvalReportWriter {
         }
         if (generationReport != null) {
             appendGenerationResults(sb, generationReport);   // Section 5.7（Plan D）
+        }
+        if (generationReport != null && vectorBaselineReport != null) {
+            appendVectorHybridComparison(sb, vectorBaselineReport, generationReport);   // Section 5.7.6（Plan E）
         }
         appendFailureCases(sb, failures);
         if (report.hasLlmJudge()) {
@@ -90,16 +106,27 @@ public class EvalReportWriter {
         sb.append("- **总耗时**：").append(elapsedMs / 1000.0).append(" 秒\n\n");
     }
 
-    private void appendScopeDeclaration(StringBuilder sb) {
+    private void appendScopeDeclaration(StringBuilder sb, boolean hasGeneration) {
         sb.append("## 0. 评估范围声明\n\n");
-        sb.append("> 本次评估**只覆盖检索阶段（retrieval）**——\"向量库召回的文档是否正确\"。\n");
-        sb.append(">\n");
-        sb.append("> 不在本次范围内：\n");
-        sb.append("> - 生成阶段（faithfulness / answer_relevancy / hallucination）—— 需要 LLM-as-judge，下一阶段\n");
-        sb.append("> - 端到端用户满意度 —— 需要人工标注\n");
-        sb.append(">\n");
-        sb.append("> 分层评估方法对照 [Ragas](https://github.com/explodinggradients/ragas) 的 retrieval / generation 两层框架。\n");
-        sb.append("> 先把 retrieval 评透再上 generation，避免指标混在一起无法定位问题来源。\n\n");
+        if (hasGeneration) {
+            sb.append("> 本次评估**覆盖 retrieval + generation 两层**（对齐 [Ragas](https://github.com/explodinggradients/ragas) 框架）：\n");
+            sb.append("> - **Retrieval 层**（Section 2~5.5）：context_recall / context_precision / LLM-judge\n");
+            sb.append("> - **Generation 层**（Section 5.7）：faithfulness / answer_relevancy\n");
+            sb.append(">\n");
+            sb.append("> 不在本次范围内：端到端用户满意度（需人工标注）。\n");
+            sb.append(">\n");
+            sb.append("> 分层评估的设计：先把 retrieval 评透再上 generation，避免指标混在一起无法定位问题来源——\n");
+            sb.append("> 答错到底是召回错还是模型幻觉？两层指标交叉看才能区分。\n\n");
+        } else {
+            sb.append("> 本次评估**只覆盖检索阶段（retrieval）**——\"向量库召回的文档是否正确\"。\n");
+            sb.append(">\n");
+            sb.append("> 不在本次范围内：\n");
+            sb.append("> - 生成阶段（faithfulness / answer_relevancy / hallucination）—— 需要 LLM-as-judge，下一阶段\n");
+            sb.append("> - 端到端用户满意度 —— 需要人工标注\n");
+            sb.append(">\n");
+            sb.append("> 分层评估方法对照 [Ragas](https://github.com/explodinggradients/ragas) 的 retrieval / generation 两层框架。\n");
+            sb.append("> 先把 retrieval 评透再上 generation，避免指标混在一起无法定位问题来源。\n\n");
+        }
     }
 
     private void appendEvalConfig(StringBuilder sb, AggregatedReport report) {
@@ -502,6 +529,90 @@ public class EvalReportWriter {
         sb.append("| 模型幻觉 | 高 | 低 | 召回正确但模型脱离 contexts 编造 → 调 generation prompt / 升级模型 |\n");
         sb.append("| 召回不足 | 低 | 高 | 召回少但模型靠常识答（不算 RAG 闭环）→ 提升 retrieval 召回率 |\n");
         sb.append("| 双低 | 低 | 低 | query 难度大或 ground truth 缺失 → 评估集设计问题 |\n\n");
+    }
+
+    /**
+     * Plan E Section 5.7.6：vector vs hybrid retrieval 对比。
+     * Section 5.7 主表用 hybrid 数据，本节加 vector baseline 做对照，证明 hybrid 提升了多少。
+     */
+    private void appendVectorHybridComparison(StringBuilder sb,
+                                              GenerationReport vec,
+                                              GenerationReport hyb) {
+        sb.append("## 5.7.6 Vector vs Hybrid Retrieval 对比（Plan E）\n\n");
+        sb.append("> Plan D 发现 generation relevancy 0.28，根因是 bge-m3 embedding 在\"抽象 query → 具体 entity\"任务上召回率低。\n");
+        sb.append("> Plan E 加 Java 端 BM25（Lucene SmartChineseAnalyzer + RRF k=60 合并），不动 Milvus、不重灌库。\n");
+        sb.append("> 本节并排展示 vector-only baseline 与 hybrid 模式数字，量化 BM25 对召回的边际贡献。\n\n");
+
+        sb.append("### 5.7.6.1 整体指标对比\n\n");
+        sb.append("| Mode | Avg Faithfulness | Avg Relevancy | Generation Failed | Judge Failed |\n");
+        sb.append("|---|---|---|---|---|\n");
+        sb.append("| **vector**（Plan D 基线）| ").append(String.format("%.3f", vec.overallAvgFaithfulness()))
+                .append(" | ").append(String.format("%.3f", vec.overallAvgRelevancy()))
+                .append(" | ").append(vec.getGenerationFailed())
+                .append(" | ").append(vec.getJudgeFailed()).append(" |\n");
+        sb.append("| **hybrid**（Plan E 修复）| ").append(String.format("%.3f", hyb.overallAvgFaithfulness()))
+                .append(" | ").append(String.format("%.3f", hyb.overallAvgRelevancy()))
+                .append(" | ").append(hyb.getGenerationFailed())
+                .append(" | ").append(hyb.getJudgeFailed()).append(" |\n");
+        sb.append("| **Δ**（hybrid − vector）| ").append(String.format("%+.3f", hyb.overallAvgFaithfulness() - vec.overallAvgFaithfulness()))
+                .append(" | **").append(String.format("%+.3f", hyb.overallAvgRelevancy() - vec.overallAvgRelevancy())).append("**")
+                .append(" | - | - |\n\n");
+
+        sb.append("### 5.7.6.2 按 Collection 分组对比\n\n");
+        sb.append("| Collection | Mode | Avg Faithfulness | Avg Relevancy | Δ Relevancy |\n");
+        sb.append("|---|---|---|---|---|\n");
+        for (String col : hyb.collections()) {
+            GenerationReport.CollectionMetrics vm = vec.getAggregated().get(col);
+            GenerationReport.CollectionMetrics hm = hyb.getAggregated().get(col);
+            if (vm == null || hm == null) continue;
+            sb.append("| ").append(col).append(" | vector ")
+                    .append(" | ").append(String.format("%.3f", vm.avgFaithfulness))
+                    .append(" | ").append(String.format("%.3f", vm.avgRelevancy))
+                    .append(" | - |\n");
+            sb.append("| ").append(col).append(" | **hybrid** ")
+                    .append(" | ").append(String.format("%.3f", hm.avgFaithfulness))
+                    .append(" | ").append(String.format("%.3f", hm.avgRelevancy))
+                    .append(" | **").append(String.format("%+.3f", hm.avgRelevancy - vm.avgRelevancy)).append("** |\n");
+        }
+        sb.append("\n");
+
+        // 找出 hybrid 比 vector 提升最大的 query（前 5 条）
+        sb.append("### 5.7.6.3 hybrid 提升最大的 5 条 query\n\n");
+        sb.append("> 这些 query 是 BM25 关键词命中带来的真实增益，向量召回看不到的关键词如\"中餐\"、\"火锅\"、\"甜品\"。\n\n");
+        sb.append("| qid | collection | query | vector R | hybrid R | Δ |\n");
+        sb.append("|---|---|---|---|---|---|\n");
+
+        java.util.Map<Integer, Boolean> vMap = new java.util.HashMap<>();
+        for (GenerationReport.Detail d : vec.getDetails()) {
+            vMap.put(d.queryId, d.relevant);
+        }
+        // 只保留 vector=false 但 hybrid=true 的 query（hybrid 真正修复的 case）
+        List<GenerationReport.Detail> uplifts = new java.util.ArrayList<>();
+        for (GenerationReport.Detail d : hyb.getDetails()) {
+            Boolean vRel = vMap.get(d.queryId);
+            if (vRel != null && !vRel && d.relevant) {
+                uplifts.add(d);
+            }
+        }
+        if (uplifts.isEmpty()) {
+            sb.append("（hybrid 未带来任何 query 的 relevancy 翻转，需要排查 BM25 索引或 RRF 参数）\n\n");
+        } else {
+            int shown = 0;
+            for (GenerationReport.Detail d : uplifts) {
+                if (shown >= 5) break;
+                sb.append("| ").append(d.queryId)
+                        .append(" | ").append(d.targetCollection.replace("_vector", ""))
+                        .append(" | ").append(escapeMd(truncate(d.query, 30)))
+                        .append(" | ✗ ")
+                        .append(" | ✓ ")
+                        .append(" | **+1** |\n");
+                shown++;
+            }
+            if (uplifts.size() > 5) {
+                sb.append("\n_共 ").append(uplifts.size()).append(" 条 query 在 hybrid 模式下从 ✗ 翻转为 ✓（仅展示前 5 条）_\n");
+            }
+            sb.append("\n");
+        }
     }
 
     private static String truncate(String s, int max) {
