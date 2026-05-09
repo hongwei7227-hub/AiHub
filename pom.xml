@@ -89,6 +89,12 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Plan G+: Actuator (暴露 reranker 监控 metric) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- MyBatis Plus 适配 Spring Boot 3 -->
         <dependency>
             <groupId>com.baomidou</groupId>

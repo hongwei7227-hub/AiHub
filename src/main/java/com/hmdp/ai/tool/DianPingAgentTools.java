@@ -5,7 +5,7 @@ import com.hmdp.ai.dto.BlogVectorHitDTO;
 import com.hmdp.ai.dto.KnowledgeHitDTO;
 import com.hmdp.ai.dto.ShopReviewSummaryDTO;
 import com.hmdp.ai.dto.ShopToolDTO;
-import com.hmdp.ai.rag.retriever.AiRagRetriever;
+import com.hmdp.ai.rag.retriever.BusinessRagRouter;
 import com.hmdp.dto.Result;
 import com.hmdp.entity.Blog;
 import com.hmdp.entity.Shop;
@@ -29,7 +29,7 @@ public class DianPingAgentTools {
 
     private final IBlogService blogService;
 
-    private final AiRagRetriever aiRagRetriever;
+    private final BusinessRagRouter businessRagRouter;
 
     private final AiAgentProperties aiAgentProperties;
 
@@ -71,7 +71,7 @@ public class DianPingAgentTools {
 
     @Tool(description = "搜索平台知识库，返回语义相关的业务知识片段")
     public List<KnowledgeHitDTO> searchKnowledgeBase(@ToolParam(description = "用户查询") String query) {
-        return aiRagRetriever.searchKnowledge(query);
+        return businessRagRouter.searchKnowledge(query);
     }
 
     @Tool(description = "获取店铺探店笔记原始文本，优先返回点赞高的样本")
@@ -110,14 +110,14 @@ public class DianPingAgentTools {
     public List<ShopToolDTO> vectorSearchShopProfiles(
             @ToolParam(description = "用户查询") String query,
             @ToolParam(description = "召回条数") Integer topK) {
-        return aiRagRetriever.searchShopProfiles(query, topK);
+        return businessRagRouter.searchShopProfiles(query, topK);
     }
 
     @Tool(description = "搜索探店笔记向量，返回语义相关的评论样本")
     public List<BlogVectorHitDTO> vectorSearchBlogs(
             @ToolParam(description = "用户查询") String query,
             @ToolParam(description = "召回条数") Integer topK) {
-        return aiRagRetriever.searchBlogReviews(query, topK);
+        return businessRagRouter.searchBlogReviews(query, topK);
     }
 
     @Tool(description = "按店铺搜索探店笔记向量，返回语义相关的评论样本")
@@ -125,7 +125,7 @@ public class DianPingAgentTools {
             @ToolParam(description = "店铺ID") Long shopId,
             @ToolParam(description = "用户查询") String query,
             @ToolParam(description = "召回条数") Integer topK) {
-        return aiRagRetriever.searchBlogReviewsByShop(shopId, query, topK);
+        return businessRagRouter.searchBlogReviewsByShop(shopId, query, topK);
     }
 
     private ShopToolDTO toShopToolDTO(Shop shop) {

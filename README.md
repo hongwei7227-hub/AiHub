@@ -31,6 +31,45 @@
 - 基于 SSE 实现 AI 对话流式输出，缓解大模型响应延迟带来的体验问题，提升本地生活场景下智能助手的交互体验、吞吐能力与可观测性
 
 
+### 业务侧 RAG 检索模式：vector / hybrid / hybrid+rerank
+
+业务侧（`DianPingAgentTools` 的工具方法）通过 `BusinessRagRouter` 统一路由到三档检索策略，由环境变量 `RAG_BUSINESS_RETRIEVAL_MODE` 控制，默认 `hybrid+rerank` 跑全量升级版本：
+
+| 模式 | 检索方式 | 评估指标增量 |
+|---|---|---|
+| `vector` | 纯向量召回（Spring AI + Milvus） | baseline |
+| `hybrid` | 向量召回 + Lucene BM25 召回，RRF（k=60）合并 | review relevancy 0 → 0.95 |
+| `hybrid+rerank` | hybrid 之后 cross-encoder 精排（BAAI/bge-reranker-v2-m3 via SiliconFlow） | shop relevancy 0.15 → 0.38 |
+
+**降级策略**：
+- 配置 flag 关闭 → bean 不创建（`@ConditionalOnProperty`）→ Router 自动退化到 vector
+- hybrid 调用抛异常 → Router try-catch 降级回 vector，单条 query 不影响整条链路
+- reranker 内部失败 → `Bge3Reranker` 自身返回 identity order（保持原序），不抛异常
+- 业务路径单次 reranker 调用 3s 超时 + 1 次重试，worst case 6.2s 而非 15s
+
+**例外**：`searchBlogReviewsByShop` 因 shopId metadata filter 是业务强约束（filter 优先级 > hybrid 召回增量），不参与模式切换，恒走纯 vector + Milvus metadata filter 下推。
+
+**一键降级**：
+```bash
+RAG_BUSINESS_RETRIEVAL_MODE=vector java -jar app.jar    # 演示翻车时直接降级
+RAG_BM25_ENABLED=false                                   # 单独关 BM25
+RAG_RERANK_ENABLED=false                                 # 单独关 reranker
+```
+
+**Reranker 监控**（actuator endpoint）：
+```bash
+curl localhost:8083/actuator/rerank-stats
+# 启用时返回：
+# {
+#   "enabled": true,
+#   "callCount": 142,
+#   "failureCount": 3,
+#   "failureRate": 0.0211,
+#   "avgLatencyMs": 287.5
+# }
+```
+
+
 ### 城市生活中目前具备的功能：
 
 1. 用户验证码登录，进入系统  

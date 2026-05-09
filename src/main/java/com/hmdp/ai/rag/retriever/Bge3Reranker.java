@@ -84,8 +84,17 @@ public class Bge3Reranker {
             throw new IllegalStateException(
                     "rag.rerank.api-key is blank. Set spring.ai.openai.api-key (业务复用) or RAG_RERANK_API_KEY env.");
         }
-        log.info("[rerank] init Bge3Reranker base-url={} model={} timeout={}ms (apiKey hidden)",
-                baseUrl, model, timeoutMs);
+        // R7: yaml 占位符链 ${RAG_RERANK_API_KEY:${spring.ai.openai.api-key}} 可能 resolve 失败成字面量
+        // 字符串，过 blank 校验但调 SiliconFlow 401。打印前 4 位 + 长度脱敏 log 验证。
+        if (apiKey.startsWith("${")) {
+            log.error("[rerank] api-key looks like an unresolved placeholder: '{}'. " +
+                    "Check yaml placeholder chain or set RAG_RERANK_API_KEY explicitly.", apiKey);
+        }
+        String maskedKey = apiKey.length() <= 8
+                ? "***"
+                : apiKey.substring(0, 4) + "***(len=" + apiKey.length() + ")";
+        log.info("[rerank] init Bge3Reranker base-url={} model={} timeout={}ms apiKey={}",
+                baseUrl, model, timeoutMs, maskedKey);
         // Spring 内置 RestClient，不引新依赖。Spring Boot 3.2 默认用 JDK HttpClient，连接超时与读超时
         // 走 default settings；timeout-ms 通过 RestClient.requestFactory 控制
         var requestFactory = new org.springframework.http.client.SimpleClientHttpRequestFactory();

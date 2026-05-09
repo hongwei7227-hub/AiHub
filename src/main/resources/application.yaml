@@ -1,6 +1,14 @@
 server:
   port: 8083
 
+# Plan G+: Actuator 暴露 reranker 监控 endpoint
+# 列全 health/info/rerank-stats，避免只写 rerank-stats 把默认 health 关掉
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,rerank-stats
+
 spring:
   application:
     name: hm-dianping
@@ -180,8 +188,8 @@ rag:
 
   # Plan E: BM25 + Hybrid Search（修复 generation relevancy 0.28）
   bm25:
-    # 默认 false 不影响业务启动；评估时 EvalRunnerTest properties 显式打开
-    enabled: ${RAG_BM25_ENABLED:false}
+    # Plan G+: 业务侧默认开启 hybrid 检索；可通过 RAG_BM25_ENABLED=false 降级回纯 vector
+    enabled: ${RAG_BM25_ENABLED:true}
     # JSONL 数据来源（与 rag.ingest.data-dir 一致，但 BM25 索引独立从文件读，不依赖 Milvus）
     data-dir: ${RAG_BM25_DATA_DIR:F:/project/hm-dianping-data-prep/output}
   hybrid:
@@ -191,14 +199,20 @@ rag:
   # Plan G: Cross-encoder Reranker（修复 hybrid 之后 shop relevancy 留在 0.350 的问题）
   # 召回完 top-K 后用 BAAI/bge-reranker-v2-m3 对 (query, doc) 对精排，cross-encoder 评分
   rerank:
-    # 默认 false 不影响业务启动；评估时 EvalRunnerTest properties 显式打开
-    enabled: ${RAG_RERANK_ENABLED:false}
+    # Plan G+: 业务侧默认开启 cross-encoder 精排；可通过 RAG_RERANK_ENABLED=false 降级回 hybrid
+    enabled: ${RAG_RERANK_ENABLED:true}
     # SiliconFlow rerank 端点（OpenAI / Cohere-style schema：POST /v1/rerank）
     base-url: ${RAG_RERANK_BASE_URL:https://api.siliconflow.cn}
     # 复用 spring.ai.openai.api-key（业务 Qwen / bge-m3 已在用此 key）
     api-key: ${RAG_RERANK_API_KEY:${spring.ai.openai.api-key}}
     model: ${RAG_RERANK_MODEL:BAAI/bge-reranker-v2-m3}
-    # 单次 rerank 调用超时，5 秒兜底
-    timeout-ms: ${RAG_RERANK_TIMEOUT_MS:5000}
-    # 失败重试次数（除首次调用，再试 N 次）
-    max-retries: ${RAG_RERANK_MAX_RETRIES:2}
+    # 业务路径单次调用 3 秒兜底（worst case = 3s + 200ms + 3s = 6.2s 而非 15s）
+    timeout-ms: ${RAG_RERANK_TIMEOUT_MS:3000}
+    # 失败重试次数（除首次调用，再试 N 次）；业务路径只重试 1 次，评估场景可通过 env 调高
+    max-retries: ${RAG_RERANK_MAX_RETRIES:1}
+
+  # Plan G+: 业务侧 RAG 检索模式（vector / hybrid / hybrid+rerank）
+  # 默认 hybrid+rerank 跑全量升级；演示翻车时可通过 RAG_BUSINESS_RETRIEVAL_MODE=vector 一键降级
+  # 注意：searchBlogReviewsByShop 因 shopId metadata filter 强约束，不参与 mode 切换，恒走纯 vector
+  business:
+    retrieval-mode: ${RAG_BUSINESS_RETRIEVAL_MODE:hybrid+rerank}
