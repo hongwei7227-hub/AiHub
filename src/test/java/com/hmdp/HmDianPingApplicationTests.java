@@ -178,4 +178,120 @@ class HmDianPingApplicationTests {
         }
         System.out.println("所有秒杀优惠券库存预热完成，共 " + list.size() + " 条");
     }
+
+    /**
+     * Plan G+：把 hm-dianping-data-prep 跑出的 shop_profile_enriched.jsonl(已含高德补的 x/y/real_address)
+     * 灌进 tb_shop，让业务侧 searchNearbyShops 工具能召回真实店铺。
+     *
+     * 跑完之后必须再跑一次 loadShopData 才会重建 Redis GEO 索引。
+     */
+    @Test
+    void enrichShopsFromJsonl() throws Exception {
+        // 杭州 bbox(119.5-120.7 经度 / 29.5-30.6 纬度)。citylimit=true 不是 100% 可靠,
+        // 高德偶尔会漏进厦门 / 南宁 / 北京 / 宁波等坐标。此处兜底过滤。
+        final double XMIN = 119.5, XMAX = 120.7, YMIN = 29.5, YMAX = 30.6;
+
+        // 0. 清理之前可能已灌进去的 out-of-bounds 数据(保留 id<=14 教学初始数据)
+        boolean cleaned = shopService.lambdaUpdate()
+                .gt(Shop::getId, 14L)
+                .and(w -> w.lt(Shop::getX, XMIN).or().gt(Shop::getX, XMAX).or().lt(Shop::getY, YMIN).or().gt(Shop::getY, YMAX))
+                .remove();
+        System.out.println("  cleanup out-of-bounds rows: " + cleaned);
+
+        java.nio.file.Path file = java.nio.file.Paths.get("F:/project/hm-dianping-data-prep/output/shop_profile_enriched.jsonl");
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        java.util.regex.Pattern numPattern = java.util.regex.Pattern.compile("\\d+");
+
+        List<Shop> shops = new ArrayList<>();
+        int skipNoCoords = 0, skipExisting = 0, skipOutOfBounds = 0, restIdRenamed = 0;
+
+        for (String line : java.nio.file.Files.readAllLines(file)) {
+            if (line.isBlank()) continue;
+            com.fasterxml.jackson.databind.JsonNode n = mapper.readTree(line);
+
+            long id = n.get("shop_id").asLong();
+            // 不覆盖现有 14 条教学初始数据(id 1-14)
+            if (id <= 14) { skipExisting++; continue; }
+
+            com.fasterxml.jackson.databind.JsonNode xN = n.get("x");
+            com.fasterxml.jackson.databind.JsonNode yN = n.get("y");
+            // 没坐标的(268 条 not_found)直接跳过 -- Redis GEO 用不了
+            if (xN == null || xN.isNull() || yN == null || yN.isNull()) {
+                skipNoCoords++;
+                continue;
+            }
+            double xVal = xN.asDouble();
+            double yVal = yN.asDouble();
+            // bbox 过滤(高德 citylimit 不是 100% 可靠,有时漏厦门/北京/南宁等坐标)
+            if (xVal < XMIN || xVal > XMAX || yVal < YMIN || yVal > YMAX) {
+                skipOutOfBounds++;
+                continue;
+            }
+
+            // restId_xxx 改用 real_address 截断作 name(670 条有 real_address)
+            String name = n.get("name").asText();
+            if (name.startsWith("restId_")) {
+                String real = n.has("real_address") ? n.get("real_address").asText() : "";
+                if (real != null && !real.isBlank()) {
+                    name = real.length() > 30 ? real.substring(0, 30) : real;
+                    restIdRenamed++;
+                }
+            }
+
+            // 地址优先用高德 real_address(完整带门牌),没有 fallback 原 address(街区级)
+            String address = "";
+            if (n.has("real_address") && !n.get("real_address").asText().isBlank()) {
+                address = n.get("real_address").asText();
+            } else if (n.has("address")) {
+                address = n.get("address").asText();
+            }
+
+            // avgPrice 解析:从 "68-138" / "人均60" / "240多" 抽数字取平均
+            Long avgPrice = null;
+            if (n.has("avg_price_hint")) {
+                String hint = n.get("avg_price_hint").asText();
+                java.util.regex.Matcher m = numPattern.matcher(hint);
+                int sum = 0, count = 0;
+                while (m.find()) {
+                    sum += Integer.parseInt(m.group());
+                    count++;
+                }
+                if (count > 0) avgPrice = (long) (sum / count);
+            }
+
+            // score = rating * 10(rating 是 0-5 浮点,score 是 0-50 整数)
+            int score = 0;
+            if (n.has("rating") && !n.get("rating").isNull()) {
+                score = (int) Math.round(n.get("rating").asDouble() * 10);
+            }
+
+            Shop shop = new Shop()
+                    .setId(id)
+                    .setName(name)
+                    .setTypeId(1L)             // 全部美食(category 全是饮食类)
+                    .setImages("")              // 高德不返图片,留空
+                    .setAddress(address)
+                    .setX(xVal)
+                    .setY(yVal)
+                    .setAvgPrice(avgPrice)
+                    .setSold(0)
+                    .setComments(n.has("review_count") ? n.get("review_count").asInt() : 0)
+                    .setScore(score)
+                    .setOpenHours("10:00-22:00")
+                    .setCreateTime(java.time.LocalDateTime.now())
+                    .setUpdateTime(java.time.LocalDateTime.now());
+            shops.add(shop);
+        }
+
+        // saveOrUpdateBatch:重跑也安全(主键存在则更新,不存在则插入)
+        boolean ok = shopService.saveOrUpdateBatch(shops, 100);
+
+        System.out.println("=== enrichShopsFromJsonl 完成 ===");
+        System.out.println("  灌入 tb_shop: " + shops.size() + " 条");
+        System.out.println("  跳过 no-coords: " + skipNoCoords + " 条");
+        System.out.println("  跳过 out-of-bounds: " + skipOutOfBounds + " 条");
+        System.out.println("  跳过 id<=14: " + skipExisting + " 条");
+        System.out.println("  restId 用 real_address 改名: " + restIdRenamed + " 条");
+        System.out.println("  saveOrUpdateBatch ok=" + ok);
+    }
 }

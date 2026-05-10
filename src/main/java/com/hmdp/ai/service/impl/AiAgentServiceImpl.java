@@ -37,6 +37,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AiAgentServiceImpl implements AiAgentService {
 
+    // Plan G+: 前端 chat 接口暂不传 x/y，fallback 到浙大玉泉校区，避免 LLM 看到 "用户坐标:x=null,y=null"
+    // 同时让 searchNearbyShops 工具有真实坐标可用（Redis GEO 查询不返回空）
+    private static final double DEFAULT_X = 120.12440574918837;
+    private static final double DEFAULT_Y = 30.269775813037267;
+
     private final ConversationMemoryService conversationMemoryService;
 
     private final AgentLoopExecutor agentLoopExecutor;
@@ -76,13 +81,16 @@ public class AiAgentServiceImpl implements AiAgentService {
                 AiAgentScene.MULTI_AGENT.name()
         );
         var chatMessage = conversationMemoryService.appendUserMessage(conversation.getId(), request.getContent());
+        // 前端未传位置时 fallback 到玉泉校区默认坐标
+        Double x = request.getX() != null ? request.getX() : DEFAULT_X;
+        Double y = request.getY() != null ? request.getY() : DEFAULT_Y;
         applicationEventPublisher.publishEvent(new ChatMessageCreatedEvent(
                 userId,
                 conversation.getId(),
                 chatMessage.getId(),
                 chatMessage.getContent(),
-                request.getX(),
-                request.getY(),
+                x,
+                y,
                 request.getShopId()
         ));
         return CreateChatMessageResponse.builder()
