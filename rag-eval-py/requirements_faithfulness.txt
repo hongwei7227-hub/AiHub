@@ -1,0 +1,13 @@
+# RAG 忠实度评分器依赖包
+# 安装: pip install -r requirements_faithfulness.txt
+
+# 核心依赖
+requests>=2.31.0        # HTTP 请求（LLM API 调用）
+
+# 可选依赖（用于从配置文件读取 API Key）
+pyyaml>=6.0            # 解析 YAML 配置文件
+
+# 开发依赖（可选）
+pytest>=7.4.0          # 单元测试
+black>=23.0.0          # 代码格式化
+flake8>=6.0.0          # 代码检查

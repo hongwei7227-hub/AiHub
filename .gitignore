@@ -38,3 +38,14 @@ src/main/resources/application-local.yaml
 *.pem
 secrets/
 
+### Python (rag-eval-py) ###
+__pycache__/
+*.pyc
+
+### Node ###
+frontend-vue/node_modules/
+
+### Runtime logs ###
+*.log
+spring-boot.log
+
