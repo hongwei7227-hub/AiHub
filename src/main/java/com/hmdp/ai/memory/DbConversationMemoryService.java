@@ -166,6 +166,18 @@ public class DbConversationMemoryService implements ConversationMemoryService {
                 .toList();
     }
 
+    @Override
+    @Transactional
+    public void softDeleteConversation(Long userId, Long conversationId) {
+        // ensureConversationOwnership 内部已经按 status=ACTIVE 过滤,二次软删会抛"会话不存在或无权限"
+        ensureConversationOwnership(userId, conversationId);
+        conversationService.lambdaUpdate()
+                .eq(AiConversation::getId, conversationId)
+                .set(AiConversation::getStatus, 0)
+                .set(AiConversation::getUpdateTime, LocalDateTime.now())
+                .update();
+    }
+
     private AiMessage saveMessage(Long conversationId, String role, String content, String toolName, String toolPayload) {
         AiMessage message = new AiMessage()
                 .setConversationId(conversationId)

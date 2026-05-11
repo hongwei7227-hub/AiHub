@@ -31,4 +31,6 @@ public interface AiAgentService {
     IndexRebuildResponse rebuildAll();
 
     IndexRebuildResponse rebuildShop(Long shopId);
+
+    void deleteConversation(Long conversationId);
 }

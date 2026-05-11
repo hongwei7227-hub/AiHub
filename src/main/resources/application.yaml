@@ -123,6 +123,10 @@ ai:
       api-host: ${QWEATHER_API_HOST:}
       api-key: ${QWEATHER_API_KEY:}
       timeout-millis: ${QWEATHER_TIMEOUT_MILLIS:3000}
+    # Plan A: 会话软删 + cron 物理清理 (ConversationCleanupTask)
+    conversation:
+      retention-days: ${AI_CONVERSATION_RETENTION_DAYS:30}
+      cleanup-cron: ${AI_CONVERSATION_CLEANUP_CRON:0 0 3 * * ?}
 
 # Caffeine 本地缓存开关（true=启用二级缓存，false=退回纯 Redis 模式）
 caffeine:

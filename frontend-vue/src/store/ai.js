@@ -276,6 +276,32 @@ export const useAiStore = defineStore('ai', {
     async refreshConversationList() {
       await this.loadConversations();
     },
+    async deleteConversation(conversationId) {
+      const userStore = useUserStore();
+      if (this.pending) {
+        return;
+      }
+      if (!userStore.isLoggedIn) {
+        userStore.openLoginDialog();
+        return;
+      }
+      this.pending = true;
+      try {
+        await aiApi.deleteConversation(conversationId);
+        // 从列表移除
+        this.conversations = this.conversations.filter(
+          (item) => Number(item.id) !== Number(conversationId)
+        );
+        // 如果删的是当前 active conversation,清空 history + 重置 conversationId
+        if (Number(this.conversationId) === Number(conversationId)) {
+          this.clearHistory();
+        } else {
+          this.syncState();
+        }
+      } finally {
+        this.pending = false;
+      }
+    },
     async sendQuickScene(scene) {
       const action = scene?.trim();
       if (!action) {

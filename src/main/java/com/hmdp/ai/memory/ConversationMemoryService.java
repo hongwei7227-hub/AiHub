@@ -29,4 +29,7 @@ public interface ConversationMemoryService {
     List<ConversationSummaryDTO> listConversations(Long userId);
 
     List<MessageDTO> listMessages(Long userId, Long conversationId);
+
+    /** 软删除会话(status=0):验证 owner 后把 conversation 置 inactive。messages 表数据保留。 */
+    void softDeleteConversation(Long userId, Long conversationId);
 }

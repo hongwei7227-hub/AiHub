@@ -49,6 +49,12 @@ export const aiApi = {
       method: 'get'
     });
   },
+  deleteConversation(conversationId) {
+    return request({
+      url: `/ai/agent/conversations/${conversationId}`,
+      method: 'delete'
+    });
+  },
   getMessages(conversationId) {
     return request({
       url: `/ai/agent/conversations/${conversationId}/messages`,

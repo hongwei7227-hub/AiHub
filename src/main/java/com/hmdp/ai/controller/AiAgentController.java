@@ -13,6 +13,7 @@ import com.hmdp.dto.CreateChatMessageResponse;
 import com.hmdp.utils.SlidingWindowLimit;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -65,6 +66,12 @@ public class AiAgentController {
     @GetMapping("/conversations")
     public List<ConversationSummaryDTO> conversations() {
         return aiAgentService.listConversations();
+    }
+
+    @SlidingWindowLimit(keySpEL = "#conversationId", windowSize = 1, timeUnit = TimeUnit.MINUTES, maxRequests = 20)
+    @DeleteMapping("/conversations/{id}")
+    public void deleteConversation(@PathVariable("id") Long conversationId) {
+        aiAgentService.deleteConversation(conversationId);
     }
 
     @SlidingWindowLimit(keySpEL = "#conversationId", windowSize = 1, timeUnit = TimeUnit.MINUTES, maxRequests = 60)

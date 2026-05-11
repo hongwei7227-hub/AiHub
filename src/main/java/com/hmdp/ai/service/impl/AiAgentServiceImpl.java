@@ -160,6 +160,12 @@ public class AiAgentServiceImpl implements AiAgentService {
         return aiVectorIndexService.rebuildShop(shopId);
     }
 
+    @Override
+    @Transactional
+    public void deleteConversation(Long conversationId) {
+        conversationMemoryService.softDeleteConversation(currentUserId(), conversationId);
+    }
+
     private Long currentUserId() {
         UserDTO user = UserHolder.getUser();
         if (user == null || user.getId() == null) {

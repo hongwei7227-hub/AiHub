@@ -12,17 +12,23 @@
     </div>
 
     <div class="conversation-list" v-if="aiStore.conversations.length">
-      <button
+      <div
         v-for="item in aiStore.conversations"
         :key="item.id"
         class="conversation-item"
-        :class="{ active: Number(aiStore.conversationId) === Number(item.id) }"
-        :disabled="aiStore.pending"
-        @click="aiStore.switchConversation(item.id)"
+        :class="{ active: Number(aiStore.conversationId) === Number(item.id), disabled: aiStore.pending }"
+        @click="!aiStore.pending && aiStore.switchConversation(item.id)"
       >
-        <strong>{{ item.title || '新会话' }}</strong>
-        <span>{{ formatTime(item.updatedTime || item.createdTime) }}</span>
-      </button>
+        <div class="item-content">
+          <strong>{{ item.title || '新会话' }}</strong>
+          <span>{{ formatTime(item.updatedTime || item.createdTime) }}</span>
+        </div>
+        <span
+          class="delete-btn"
+          title="彻底删除该会话"
+          @click.stop="confirmDelete(item)"
+        >🗑</span>
+      </div>
     </div>
 
     <div v-else class="empty-block">暂无历史会话，点击右上角可创建新会话</div>
@@ -30,6 +36,7 @@
 </template>
 
 <script setup>
+import { ElMessageBox } from 'element-plus';
 import { useAiStore } from '@/store/ai';
 
 defineProps({
@@ -40,6 +47,26 @@ defineProps({
 });
 
 const aiStore = useAiStore();
+
+async function confirmDelete(item) {
+  if (aiStore.pending) {
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      `此操作不可逆,30 天内可联系管理员还原,30 天后将物理彻底删除。\n\n确认删除会话「${item.title || '新会话'}」吗?`,
+      '彻底删除会话?',
+      {
+        confirmButtonText: '彻底删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    );
+  } catch {
+    return; // 用户取消
+  }
+  await aiStore.deleteConversation(item.id);
+}
 
 function formatTime(value) {
   if (!value) {
@@ -98,8 +125,10 @@ function formatTime(value) {
 }
 
 .conversation-item {
-  display: grid;
-  gap: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   padding: 12px;
   text-align: left;
   border: 1px solid #f0e0d4;
@@ -107,6 +136,11 @@ function formatTime(value) {
   background: #fff;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.conversation-item.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .conversation-item:hover {
@@ -119,12 +153,42 @@ function formatTime(value) {
   background: #fff4eb;
 }
 
-.conversation-item strong {
-  color: #333;
+.item-content {
+  display: grid;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
 }
 
-.conversation-item span {
+.item-content strong {
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-content span {
   font-size: 12px;
   color: #999;
+}
+
+.delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #999;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.delete-btn:hover {
+  background: #fff0ed;
+  color: #f56c6c;
 }
 </style>
