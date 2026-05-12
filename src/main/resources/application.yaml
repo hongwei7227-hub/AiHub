@@ -137,7 +137,7 @@ caffeine:
 # ===== RAG 评估框架（Plan B）=====
 rag:
   ingest:
-    data-dir: F:/project/hm-dianping-data-prep/output
+    data-dir: F:/project/data-prep/output
     batch-size: 100
     embedding-retry: 3
   eval:
@@ -201,7 +201,7 @@ rag:
     # Plan G+: 业务侧默认开启 hybrid 检索；可通过 RAG_BM25_ENABLED=false 降级回纯 vector
     enabled: ${RAG_BM25_ENABLED:true}
     # JSONL 数据来源（与 rag.ingest.data-dir 一致，但 BM25 索引独立从文件读，不依赖 Milvus）
-    data-dir: ${RAG_BM25_DATA_DIR:F:/project/hm-dianping-data-prep/output}
+    data-dir: ${RAG_BM25_DATA_DIR:F:/project/data-prep/output}
   hybrid:
     rrf-k: 60          # RRF 默认参数（业界标准）
     fetch-k: 20        # 每个 retriever 各拿 20，合并后取最终 topK

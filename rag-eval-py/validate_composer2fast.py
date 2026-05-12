@@ -12,7 +12,7 @@ import statistics
 from concurrent.futures import ThreadPoolExecutor
 from openai import OpenAI
 
-EVAL_FILE = r"F:\project\hm-dianping-data-prep\output\eval_queries.jsonl"
+EVAL_FILE = r"F:\project\data-prep\output\eval_queries.jsonl"
 N = 20
 CONCURRENCY = 3
 MODELS = ["composer-2-fast", "sonnet-4.5"]

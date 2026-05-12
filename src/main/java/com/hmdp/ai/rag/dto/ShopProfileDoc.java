@@ -6,7 +6,7 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * RAG 灌库专用：店铺画像 DTO，对齐 hm-dianping-data-prep/output/shop_profile.jsonl 字段。
+ * RAG 灌库专用：店铺画像 DTO，对齐 data-prep/output/shop_profile.jsonl 字段。
  *
  * 字段名 1:1 对齐 JSONL（snake_case 通过 @JsonProperty 映射），不做命名转换；
  * shop_id 用 String 兼容 yf_dianping 反推出来的 "restId_45623" 这种字符串 ID。

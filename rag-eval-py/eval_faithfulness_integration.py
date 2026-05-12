@@ -11,7 +11,7 @@ from datetime import datetime
 
 DEFAULT_EVAL_FILE = os.environ.get(
     "EVAL_QUERIES_FILE",
-    r"F:\project\hm-dianping-data-prep\output\eval_queries.jsonl"
+    r"F:\project\data-prep\output\eval_queries.jsonl"
 )
 
 

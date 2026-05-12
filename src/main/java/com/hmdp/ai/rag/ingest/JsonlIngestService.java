@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * 把 hm-dianping-data-prep/output/ 下的 JSONL 灌进 Milvus。
+ * 把 data-prep/output/ 下的 JSONL 灌进 Milvus。
  *
  * 关键设计（与 Plan B M1 / M2 对齐）：
  * - 灌前用 vectorStore.delete(eq(docType, ...)) 把旧业务残留（14 条 Shop / 4 条 Blog 等）清掉，

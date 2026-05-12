@@ -180,7 +180,7 @@ class HmDianPingApplicationTests {
     }
 
     /**
-     * Plan G+：把 hm-dianping-data-prep 跑出的 shop_profile_enriched.jsonl(已含高德补的 x/y/real_address)
+     * Plan G+：把 data-prep 跑出的 shop_profile_enriched.jsonl(已含高德补的 x/y/real_address)
      * 灌进 tb_shop，让业务侧 searchNearbyShops 工具能召回真实店铺。
      *
      * 跑完之后必须再跑一次 loadShopData 才会重建 Redis GEO 索引。
@@ -198,7 +198,7 @@ class HmDianPingApplicationTests {
                 .remove();
         System.out.println("  cleanup out-of-bounds rows: " + cleaned);
 
-        java.nio.file.Path file = java.nio.file.Paths.get("F:/project/hm-dianping-data-prep/output/shop_profile_enriched.jsonl");
+        java.nio.file.Path file = java.nio.file.Paths.get("F:/project/data-prep/output/shop_profile_enriched.jsonl");
         com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
         java.util.regex.Pattern numPattern = java.util.regex.Pattern.compile("\\d+");
 
