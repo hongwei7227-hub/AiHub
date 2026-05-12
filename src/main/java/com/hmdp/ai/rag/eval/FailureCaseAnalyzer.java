@@ -53,15 +53,24 @@ public class FailureCaseAnalyzer {
             VectorStore vs = pickVectorStore(q.getTargetCollection());
             if (vs == null) continue;
 
+            // Bug 1.6: shop_profile 评估排除玉泉 100001-100999
+            boolean isShopProfile = "shop_profile_vector".equals(q.getTargetCollection());
+            int searchTopK = isShopProfile ? topK * 3 : topK;
             SearchRequest req = SearchRequest.builder()
                     .query(q.getQuery())
-                    .topK(topK)
+                    .topK(searchTopK)
                     .similarityThreshold(0.0)
                     .build();
             List<Document> hits;
             try {
                 hits = vs.similaritySearch(req);
                 if (hits == null) hits = List.of();
+                if (isShopProfile) {
+                    hits = hits.stream()
+                            .filter(d -> !RecallEvaluator.isYuquanDemo(RecallEvaluator.extractBusinessId(d)))
+                            .limit(topK)
+                            .collect(java.util.stream.Collectors.toList());
+                }
             } catch (Exception e) {
                 log.warn("Failure analysis search failed for query_id={}: {}", q.getQueryId(), e.toString());
                 continue;

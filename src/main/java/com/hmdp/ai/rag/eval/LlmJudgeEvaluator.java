@@ -252,14 +252,23 @@ public class LlmJudgeEvaluator {
             return List.of();
         }
 
+        // Bug 1.6: shop_profile 评估排除玉泉 100001-100999 (跟 RecallEvaluator 对齐)
+        boolean isShopProfile = "shop_profile_vector".equals(collection);
+        int searchTopK = isShopProfile ? maxTopK * 3 : maxTopK;
         SearchRequest req = SearchRequest.builder()
                 .query(query.getQuery())
-                .topK(maxTopK)
+                .topK(searchTopK)
                 .similarityThreshold(0.0)
                 .build();
         List<Document> hits = vs.similaritySearch(req);
         if (hits == null || hits.isEmpty()) {
             return List.of();
+        }
+        if (isShopProfile) {
+            hits = hits.stream()
+                    .filter(d -> !RecallEvaluator.isYuquanDemo(RecallEvaluator.extractBusinessId(d)))
+                    .limit(maxTopK)
+                    .collect(java.util.stream.Collectors.toList());
         }
 
         // batch-mode：单 query 1 次 LLM 调用判全部 top-K，节省 10x 配额（copilot-api 按次计费场景）

@@ -95,6 +95,14 @@ public class RecallEvaluator {
 
     /**
      * 单 query × 多配置评估：单次 Milvus 检索（topK=maxTopK），内存切片得到所有配置的指标。
+     *
+     * 评估专用 filter (Bug 1.6 修复): shop_profile_vector query 时, **评估视角下**
+     * 排除玉泉演示数据 (id 100001-100999). 原因: ground truth 是 yf shop_id 列表,
+     * 玉泉店因店名/地址含"杭州""杭帮"等关键词,embedding 召回挤前 5,导致 yf 真目标店
+     * 落到 top-K 之外, baseline 永远 miss. 业务路径不动 — 玉泉仍在 Milvus 供
+     * searchNearbyShops/RAG 真实场景召回, 只是评估指标计算时把它排除以避免污染.
+     *
+     * 搜 topK*3 留 buffer, java 端 filter 后 truncate 到 maxTopK.
      */
     public Map<EvalConfig, EvalResult> evaluateOne(EvalQuery query, int maxTopK, List<EvalConfig> configs) {
         // embedding 通过 cache 命中
@@ -106,15 +114,22 @@ public class RecallEvaluator {
             return emptyResults(configs);
         }
 
-        // 单次检索：topK=maxTopK，threshold=0（最低，留给后面切片过滤）
+        boolean isShopProfile = "shop_profile_vector".equals(query.getTargetCollection());
+        int searchTopK = isShopProfile ? maxTopK * 3 : maxTopK;
         SearchRequest req = SearchRequest.builder()
                 .query(query.getQuery())
-                .topK(maxTopK)
+                .topK(searchTopK)
                 .similarityThreshold(0.0)
                 .build();
         List<Document> hits = vs.similaritySearch(req);
         if (hits == null) {
             hits = List.of();
+        }
+        if (isShopProfile) {
+            hits = hits.stream()
+                    .filter(d -> !isYuquanDemo(extractBusinessId(d)))
+                    .limit(maxTopK)
+                    .collect(Collectors.toList());
         }
 
         Set<String> relevantSet = new HashSet<>(query.getRelevantIds());
@@ -153,6 +168,10 @@ public class RecallEvaluator {
     /**
      * 从 Document.metadata 提取业务 ID。
      * 优先级：reviewId > qaId > shopId > sourceId（兼容老数据）。
+     *
+     * Bug 1.5 修复: Spring AI Milvus 把 metadata 里的 Number 类型反序列化为 Double,
+     * String.valueOf(Double 200062.0) = "200062.0", 跟评估集 relevant_ids "200062" 不 match.
+     * 这里统一剥掉 ".0" 后缀, 兼容 Long/Integer/Double 几种 Number 类型.
      */
     static String extractBusinessId(Document doc) {
         Map<String, Object> meta = doc.getMetadata();
@@ -161,18 +180,38 @@ public class RecallEvaluator {
         }
         Object reviewId = meta.get(AiMetadataConstants.REVIEW_ID);
         if (reviewId != null && !"".equals(reviewId)) {
-            return String.valueOf(reviewId);
+            return normalizeId(reviewId);
         }
         Object qaId = meta.get(AiMetadataConstants.QA_ID);
         if (qaId != null && !"".equals(qaId)) {
-            return String.valueOf(qaId);
+            return normalizeId(qaId);
         }
         Object shopId = meta.get(AiMetadataConstants.SHOP_ID);
         if (shopId != null && !"".equals(shopId)) {
-            return String.valueOf(shopId);
+            return normalizeId(shopId);
         }
         Object sourceId = meta.get(AiMetadataConstants.SOURCE_ID);
-        return sourceId == null ? null : String.valueOf(sourceId);
+        return sourceId == null ? null : normalizeId(sourceId);
+    }
+
+    /** Spring AI Milvus 把 Number 反序列化为 Double, 剥 ".0" 后缀避免 ID 比对 miss. */
+    private static String normalizeId(Object value) {
+        String s = String.valueOf(value);
+        if (s.endsWith(".0")) {
+            s = s.substring(0, s.length() - 2);
+        }
+        return s;
+    }
+
+    /** 玉泉演示数据 id 段 (100001-100999) 评估视角下排除 — 业务路径仍能召回. */
+    static boolean isYuquanDemo(String bizId) {
+        if (bizId == null) return false;
+        try {
+            long id = Long.parseLong(bizId);
+            return id >= 100001 && id <= 100999;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     /**

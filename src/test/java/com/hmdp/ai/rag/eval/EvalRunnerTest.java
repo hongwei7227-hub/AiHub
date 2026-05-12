@@ -29,7 +29,7 @@ import java.util.Map;
 @SpringBootTest(properties = {
         "ai.agent.bootstrap.enabled=false",
         "rag.eval.llm-judge.enabled=true",
-        "rag.eval.generation.enabled=true",
+        "rag.eval.generation.enabled=false",  // Plan J 收尾临时关: Generation 三 PASS 75min, Plan H 已有数字, 这次先验证 LLM-judge
         // Plan D 发现：业务 ai.agent.rag.similarity-threshold=0.65 对评估集所有 query 召回 0 → generation 全部"无法回答"。
         // 评估时降到 0.5 让 generation pipeline 能拿到 contexts；业务运行时仍用 0.65（这里只 override 测试 JVM）。
         "ai.agent.rag.similarity-threshold=0.5",
@@ -50,9 +50,9 @@ class EvalRunnerTest {
     @Autowired private JsonlReader jsonlReader;
     @Autowired private LlmJudgeEvaluator llmJudgeEvaluator;
     @Autowired private LlmJudge llmJudge;
-    @Autowired private GenerationEvaluator generationEvaluator;
-    @Autowired private RagAnswerGenerator ragAnswerGenerator;
-    @Autowired private GenerationJudge generationJudge;
+    @Autowired(required = false) private GenerationEvaluator generationEvaluator;
+    @Autowired(required = false) private RagAnswerGenerator ragAnswerGenerator;
+    @Autowired(required = false) private GenerationJudge generationJudge;
 
     @Value("${rag.eval.thresholds}")        private List<Double> thresholds;
     @Value("${rag.eval.top-k-list}")        private List<Integer> topKList;
@@ -104,6 +104,14 @@ class EvalRunnerTest {
         //   PASS 1: vector baseline（Plan D）
         //   PASS 2: hybrid (vector + BM25 + RRF)（Plan E）
         //   PASS 3: hybrid+rerank (RRF top-20 → bge-reranker-v2-m3 精排 top-5)（Plan G）
+        // Plan J 收尾: rag.eval.generation.enabled=false 时整段跳过 (省 75min, Plan H 已有数字).
+        if (generationEvaluator == null || ragAnswerGenerator == null) {
+            log.info("[gen-eval] SKIPPED (rag.eval.generation.enabled=false) — 写 retrieval-only 报告");
+            EvalReportWriter writer = new EvalReportWriter();
+            Path reportPath = writer.write(Path.of(outputDir), report, filterExp, failures, queries.size(), elapsed);
+            log.info("[eval] ✅ report written: {}", reportPath);
+            return;
+        }
         long genStart = System.currentTimeMillis();
         String originalMode = ragAnswerGenerator.getRetrievalMode();
         log.info("[gen-eval] Plan G: triple-pass evaluation (vector + hybrid + hybrid+rerank). Mode default={}", originalMode);

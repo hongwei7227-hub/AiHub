@@ -3,7 +3,9 @@ package com.hmdp.ai.rag.ingest;
 import com.hmdp.ai.rag.AiMetadataConstants;
 import com.hmdp.ai.rag.dto.KnowledgeDoc;
 import com.hmdp.ai.rag.dto.ReviewDoc;
-import com.hmdp.ai.rag.dto.ShopProfileDoc;
+import com.hmdp.ai.rag.indexer.ShopProfileDocumentBuilder;
+import com.hmdp.entity.Shop;
+import com.hmdp.service.IShopService;
 import io.milvus.client.MilvusServiceClient;
 import io.milvus.param.collection.DropCollectionParam;
 import io.milvus.param.collection.HasCollectionParam;
@@ -44,6 +46,7 @@ public class JsonlIngestService {
     private final JsonlReader jsonlReader;
     private final MilvusServiceClient milvusClient;
     private final MilvusVectorStoreProperties milvusProps;
+    private final IShopService shopService;
 
     @Value("${rag.ingest.data-dir}")
     private String dataDir;
@@ -56,23 +59,36 @@ public class JsonlIngestService {
                               @Qualifier("blogReviewVectorStore") VectorStore blogReviewVectorStore,
                               JsonlReader jsonlReader,
                               MilvusServiceClient milvusClient,
-                              MilvusVectorStoreProperties milvusProps) {
+                              MilvusVectorStoreProperties milvusProps,
+                              IShopService shopService) {
         this.knowledgeVectorStore = knowledgeVectorStore;
         this.shopProfileVectorStore = shopProfileVectorStore;
         this.blogReviewVectorStore = blogReviewVectorStore;
         this.jsonlReader = jsonlReader;
         this.milvusClient = milvusClient;
         this.milvusProps = milvusProps;
+        this.shopService = shopService;
     }
 
     // ===== 入口方法 =====
 
+    /**
+     * Plan J：评估路径不再读 shop_profile.jsonl，改成读 MySQL tb_shop 全量。
+     * 跟业务路径 {@code AiVectorIndexServiceImpl.rebuildAllShopProfiles()} 共用同一画像拼接逻辑
+     * ({@link ShopProfileDocumentBuilder#fromShop}), 保证业务-评估同源——
+     * 评估 drop+rewrite 后业务侧 ensureInitialized 看到非空跳过，里面装的内容跟业务路径自己灌的字字相同。
+     *
+     * 玉泉数据保留: 画像本质都是结构化字段拼接(店名+地址+品类+评分),玉泉跟 yf 在 Milvus 召回质量差距不大,
+     * 保留全量 1235 让业务-评估完全同源。
+     */
     public IngestStat ingestShopProfile() {
         String collectionName = "shop_profile_vector";
         dropAndRecreate(collectionName, shopProfileVectorStore);
-        Path file = Path.of(dataDir, "shop_profile.jsonl");
-        List<ShopProfileDoc> docs = jsonlReader.readAll(file, ShopProfileDoc.class);
-        return doIngest(collectionName, shopProfileVectorStore, docs, this::toShopDocument, ShopProfileDoc::getShopId);
+        List<Shop> shops = shopService.list();
+        log.info("[{}] reading {} shops from MySQL tb_shop", collectionName, shops.size());
+        return doIngest(collectionName, shopProfileVectorStore, shops,
+                ShopProfileDocumentBuilder::fromShop,
+                shop -> String.valueOf(shop.getId()));
     }
 
     public IngestStat ingestReviews() {
@@ -143,28 +159,8 @@ public class JsonlIngestService {
 
     // ===== DTO -> Spring AI Document =====
 
-    private Document toShopDocument(ShopProfileDoc d) {
-        if (d.getContent() == null || d.getContent().isBlank()) {
-            return null;
-        }
-        Map<String, Object> meta = new HashMap<>();
-        meta.put(AiMetadataConstants.DOC_TYPE, AiMetadataConstants.DOC_TYPE_SHOP_PROFILE);
-        meta.put(AiMetadataConstants.SOURCE_ID, nullToEmpty(d.getShopId()));
-        meta.put(AiMetadataConstants.SHOP_ID, nullToEmpty(d.getShopId()));
-        meta.put(AiMetadataConstants.SHOP_NAME, nullToEmpty(d.getName()));
-        meta.put(AiMetadataConstants.CITY, nullToEmpty(d.getCity()));
-        meta.put(AiMetadataConstants.CATEGORY, nullToEmpty(d.getCategory()));
-        meta.put(AiMetadataConstants.ADDRESS, nullToEmpty(d.getAddress()));
-        meta.put(AiMetadataConstants.RATING, defaultDouble(d.getRating()));
-        meta.put(AiMetadataConstants.RATING_FLAVOR, defaultDouble(d.getRatingFlavor()));
-        meta.put(AiMetadataConstants.RATING_ENV, defaultDouble(d.getRatingEnv()));
-        meta.put(AiMetadataConstants.RATING_SERVICE, defaultDouble(d.getRatingService()));
-        meta.put(AiMetadataConstants.COMMENTS, d.getReviewCount() == null ? 0 : d.getReviewCount());
-        meta.put(AiMetadataConstants.ENRICHMENT_SOURCE, nullToEmpty(d.getEnrichmentSource()));
-        // 注意：signature_dishes (List<String>) 故意不写进 metadata，
-        // 招牌菜已经在 content 字段里参与 embedding 了。
-        return new Document(d.getContent(), meta);
-    }
+    // Plan J: 评估路径不再从 ShopProfileDoc 转换——shop 走 MySQL+ShopProfileDocumentBuilder
+    // 原 toShopDocument(ShopProfileDoc) 已删除，DTO ShopProfileDoc 仅保留供数据准备阶段使用
 
     private Document toReviewDocument(ReviewDoc d) {
         if (d.getContent() == null || d.getContent().isBlank()) {

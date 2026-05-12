@@ -169,46 +169,8 @@ public class AiVectorIndexServiceImpl implements AiVectorIndexService {
     }
 
     private Document toShopProfileDocument(Shop shop) {
-        Map<String, Object> metadata = new HashMap<>();
-        metadata.put(AiMetadataConstants.DOC_TYPE, AiMetadataConstants.DOC_TYPE_SHOP_PROFILE);
-        metadata.put(AiMetadataConstants.SOURCE_ID, shop.getId());
-        metadata.put(AiMetadataConstants.SHOP_ID, shop.getId());
-        metadata.put(AiMetadataConstants.TYPE_ID, shop.getTypeId());
-        metadata.put(AiMetadataConstants.AREA, defaultString(shop.getArea()));
-        metadata.put(AiMetadataConstants.USER_ID, 0L);
-        metadata.put(AiMetadataConstants.SHOP_NAME, shop.getName());
-        metadata.put(AiMetadataConstants.ADDRESS, shop.getAddress());
-        metadata.put(AiMetadataConstants.AVG_PRICE, shop.getAvgPrice());
-        metadata.put(AiMetadataConstants.RATING, shop.getScore() == null ? null : shop.getScore() / 10.0);
-        metadata.put(AiMetadataConstants.COMMENTS, shop.getComments());
-        metadata.put(AiMetadataConstants.SOLD, shop.getSold());
-        metadata.put(AiMetadataConstants.OPEN_HOURS, defaultString(shop.getOpenHours()));
-        metadata.put(AiMetadataConstants.X, shop.getX());
-        metadata.put(AiMetadataConstants.Y, shop.getY());
-
-        // 店铺画像文本尽量保留结构化字段，方便向量召回和结果解释共用一份数据。
-        String text = """
-                店铺名：%s
-                分类ID：%s
-                商圈：%s
-                地址：%s
-                均价：%s元
-                评分：%s分
-                评论数：%s
-                销量：%s
-                营业时间：%s
-                """.formatted(
-                shop.getName(),
-                shop.getTypeId(),
-                defaultString(shop.getArea()),
-                shop.getAddress(),
-                shop.getAvgPrice(),
-                shop.getScore() == null ? "未知" : shop.getScore() / 10.0,
-                shop.getComments(),
-                shop.getSold(),
-                defaultString(shop.getOpenHours())
-        );
-        return new Document(String.valueOf(shop.getId()), text, metadata);
+        // Plan J: 业务路径 + 评估路径 (JsonlIngestService) 共用同一画像拼接逻辑
+        return ShopProfileDocumentBuilder.fromShop(shop);
     }
 
     private List<Document> buildBlogDocuments(List<Blog> blogs) {
