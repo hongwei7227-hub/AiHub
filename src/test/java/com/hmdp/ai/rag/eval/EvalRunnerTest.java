@@ -29,7 +29,7 @@ import java.util.Map;
 @SpringBootTest(properties = {
         "ai.agent.bootstrap.enabled=false",
         "rag.eval.llm-judge.enabled=true",
-        "rag.eval.generation.enabled=false",  // Plan J 收尾临时关: Generation 三 PASS 75min, Plan H 已有数字, 这次先验证 LLM-judge
+        "rag.eval.generation.enabled=true",
         // Plan D 发现：业务 ai.agent.rag.similarity-threshold=0.65 对评估集所有 query 召回 0 → generation 全部"无法回答"。
         // 评估时降到 0.5 让 generation pipeline 能拿到 contexts；业务运行时仍用 0.65（这里只 override 测试 JVM）。
         "ai.agent.rag.similarity-threshold=0.5",
