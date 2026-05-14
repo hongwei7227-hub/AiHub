@@ -39,7 +39,7 @@ public class SimpleRedisLock implements ILock {
         
         while (true) {
             Boolean success = stringRedisTemplate.opsForValue()
-                    .setIfAbsent(KEY_PREFIX + name, threadId, leaseTime, TimeUnit.SECONDS);
+                    .setIfAbsent(KEY_PREFIX + name, threadId, leaseTime, unit);
             if (Boolean.TRUE.equals(success)) {
                 return true;
             }

@@ -1,6 +1,5 @@
 package com.hmdp.utils;
 
-import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
@@ -131,20 +130,22 @@ public class CacheClient {
             return r;
         }
         // 4.2.已过期，需要缓存重建
-        // 5.获取互斥锁
+        // 5.获取互斥锁（SimpleRedisLock：UUID 标识 + Lua 原子释放）
         String lockKey = LOCK_SHOP_KEY + id;
-        boolean isLock = tryLock(lockKey);
+        SimpleRedisLock lock = new SimpleRedisLock(lockKey, stringRedisTemplate);
+        boolean isLock = lock.tryLock(0, 10, TimeUnit.SECONDS);
         // 6.判断是否获取锁成功
-        if (isLock){
+        if (isLock) {
             // 6.1.成功，开启独立线程，实现缓存重建
+            // 注意：SimpleRedisLock 用线程 ID 校验持有者，异步线程的 ID 与主线程不同，
+            // 跨线程 unlock 会被 Lua 校验拒绝。这里不显式释放，让锁靠 leaseTime（10s）
+            // 自然过期 —— 同时附带"10s 内防止重复触发重建"的限流效果。
             CACHE_REBUILD_EXECUTOR.submit(() -> {
                 try {
                     R newR = dbFallback.apply(id);
                     this.setWithLogicalExpire(key, newR, time, unit);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
-                }finally {
-                    unlock(lockKey);
                 }
             });
         }
@@ -178,15 +179,24 @@ public class CacheClient {
             return null;
         }
 
-        // 4.实现缓存重建
+        // 4.实现缓存重建：用 SimpleRedisLock 互斥（UUID 标识 + Lua 原子释放）
         String lockKey = LOCK_SHOP_KEY + id;
-        R r = null;
-        try {
-            boolean isLock = tryLock(lockKey);
-            if (!isLock) {
+        SimpleRedisLock lock = new SimpleRedisLock(lockKey, stringRedisTemplate);
+        boolean isLock = lock.tryLock(0, 10, TimeUnit.SECONDS);
+        if (!isLock) {
+            // 拿不到锁：sleep 后递归重试。注意：递归调用必须在 try-finally 之外，
+            // 否则未持锁的本线程在 finally 里调 unlock 会误删别人的锁
+            try {
                 Thread.sleep(50);
-                return queryWithMutex(keyPrefix, id, type, dbFallback, time, unit);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
             }
+            return queryWithMutex(keyPrefix, id, type, dbFallback, time, unit);
+        }
+        // 已拿到锁，try-finally 保证释放
+        R r;
+        try {
             r = dbFallback.apply(id);
             if (r == null) {
                 if (enableCaffeineCache) caffeineCache.put(key, "");
@@ -195,20 +205,9 @@ public class CacheClient {
             }
             // 5.存在，写入两层缓存
             this.set(key, r, time, unit);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }finally {
-            unlock(lockKey);
+        } finally {
+            lock.unlock();
         }
         return r;
-    }
-
-    private boolean tryLock(String key) {
-        Boolean flag = stringRedisTemplate.opsForValue().setIfAbsent(key, "1", 10, TimeUnit.SECONDS);
-        return BooleanUtil.isTrue(flag);
-    }
-
-    private void unlock(String key) {
-        stringRedisTemplate.delete(key);
     }
 }

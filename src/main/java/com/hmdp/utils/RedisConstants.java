@@ -11,7 +11,8 @@ public class RedisConstants {
     public static final Long CACHE_SHOP_TTL = 30L;
     public static final String CACHE_SHOP_KEY = "cache:shop:";
 
-    public static final String LOCK_SHOP_KEY = "lock:shop:";
+    // SimpleRedisLock 的 name 部分（不含 "lock:" 前缀，SimpleRedisLock 内部会拼接）
+    public static final String LOCK_SHOP_KEY = "shop:";
     public static final Long LOCK_SHOP_TTL = 10L;
 
     public static final String SECKILL_STOCK_KEY = "seckill:stock:";

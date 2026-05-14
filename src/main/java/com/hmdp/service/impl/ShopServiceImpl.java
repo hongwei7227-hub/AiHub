@@ -52,15 +52,11 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
             log.info("布隆过滤器拦截，店铺ID {} 不存在", id);
             return Result.fail("店铺不存在");
         }
-        // 解决缓存穿透
+        // 互斥锁解决缓存击穿（内置空值缓存，同时具备穿透防护）
         Shop shop = cacheClient
-                .queryWithPassThrough(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
+                .queryWithMutex(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
 
-        // 互斥锁解决缓存击穿
-        // Shop shop = cacheClient
-        //         .queryWithMutex(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
-
-        // 逻辑过期解决缓存击穿
+        // 备选方案：逻辑过期（已在 CacheClient 中实现，业务侧未启用）
         // Shop shop = cacheClient
         //         .queryWithLogicalExpire(CACHE_SHOP_KEY, id, Shop.class, this::getById, 20L, TimeUnit.SECONDS);
 
