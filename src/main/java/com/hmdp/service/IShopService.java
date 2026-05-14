@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
  *  服务类
  * </p>
  *
- * @author 虎哥
+ * @author bany zhao
  * @since 2021-12-22
  */
 public interface IShopService extends IService<Shop> {

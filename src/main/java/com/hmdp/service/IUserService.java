@@ -12,7 +12,7 @@ import jakarta.servlet.http.HttpSession;
  *  服务类
  * </p>
  *
- * @author 虎哥
+ * @author bany zhao
  * @since 2021-12-22
  */
 public interface IUserService extends IService<User> {

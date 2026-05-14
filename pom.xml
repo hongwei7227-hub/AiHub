@@ -11,10 +11,10 @@
     </parent>
 
     <groupId>com.hmdp</groupId>
-    <artifactId>hm-dianping</artifactId>
+    <artifactId>cityaihub</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>hm-dianping</name>
-    <description>Demo project for Spring Boot</description>
+    <name>cityaihub</name>
+    <description>CityAIHub - Local life AI Agent platform</description>
 
     <properties>
         <java.version>17</java.version>

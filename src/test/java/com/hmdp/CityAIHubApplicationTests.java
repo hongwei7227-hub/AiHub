@@ -34,7 +34,7 @@ import static com.hmdp.utils.RedisConstants.CACHE_SHOP_KEY;
 import static com.hmdp.utils.RedisConstants.SHOP_GEO_KEY;
 import cn.hutool.core.lang.UUID;
 @SpringBootTest
-class HmDianPingApplicationTests {
+class CityAIHubApplicationTests {
 
     @Resource
     private CacheClient cacheClient;

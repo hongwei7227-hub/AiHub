@@ -8,10 +8,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @MapperScan("com.hmdp.mapper")
 @SpringBootApplication
 @EnableScheduling
-public class HmDianPingApplication {
+public class CityAIHubApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(HmDianPingApplication.class, args);
+        SpringApplication.run(CityAIHubApplication.class, args);
     }
 
 }
