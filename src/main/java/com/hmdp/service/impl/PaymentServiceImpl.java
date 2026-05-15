@@ -77,21 +77,25 @@ public class PaymentServiceImpl implements IPaymentService {
             if (order == null) {
                 return Result.fail("订单不存在");
             }
-
             if (VoucherOrder.STATUS_PAID.equals(order.getStatus())) {
                 log.info("订单已支付，订单ID={}", orderId);
                 return Result.ok("订单已支付");
             }
 
-            if (!VoucherOrder.STATUS_UNPAID.equals(order.getStatus())) {
-                log.warn("订单状态不正确，无法支付，订单ID={}, 状态={}", orderId, order.getStatus());
+            // CAS update：仅当订单仍是未支付状态时改成已支付。
+            // 返回 false = 对方先改了（重复回调 / 已被超时关单），数据库层兜底防并发漏洞
+            LocalDateTime now = LocalDateTime.now();
+            boolean paid = voucherOrderService.lambdaUpdate()
+                    .set(VoucherOrder::getStatus, VoucherOrder.STATUS_PAID)
+                    .set(VoucherOrder::getPayTime, now)
+                    .set(VoucherOrder::getUpdateTime, now)
+                    .eq(VoucherOrder::getId, orderId)
+                    .eq(VoucherOrder::getStatus, VoucherOrder.STATUS_UNPAID)
+                    .update();
+            if (!paid) {
+                log.warn("订单状态不是未支付，无法支付，订单ID={}", orderId);
                 return Result.fail("订单状态不正确");
             }
-
-            order.setStatus(VoucherOrder.STATUS_PAID);
-            order.setPayTime(LocalDateTime.now());
-            order.setUpdateTime(LocalDateTime.now());
-            voucherOrderService.updateById(order);
 
             log.info("订单支付成功，订单ID={}", orderId);
             return Result.ok("支付成功");

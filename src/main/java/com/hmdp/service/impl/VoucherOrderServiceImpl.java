@@ -204,15 +204,17 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             return;
         }
 
-        if (!VoucherOrder.STATUS_UNPAID.equals(order.getStatus())) {
+        // CAS update：仅当订单仍是未支付时改成已取消。
+        // 返回 false = 对方先改了（已支付回调成功 / 已被关过），跳过后续库存回滚以免误回。
+        boolean cancelled = lambdaUpdate()
+                .set(VoucherOrder::getStatus, VoucherOrder.STATUS_CANCELLED)
+                .set(VoucherOrder::getUpdateTime, LocalDateTime.now())
+                .eq(VoucherOrder::getId, orderId)
+                .eq(VoucherOrder::getStatus, VoucherOrder.STATUS_UNPAID)
+                .update();
+        if (!cancelled) {
             log.info("订单状态不是未支付，无需关闭，订单ID={}, 状态={}", orderId, order.getStatus());
             return;
-        }
-
-        order.setStatus(VoucherOrder.STATUS_CANCELLED);
-        order.setUpdateTime(LocalDateTime.now());
-        if (!updateById(order)) {
-            throw new IllegalStateException("关闭超时订单失败，订单ID=" + orderId);
         }
 
         boolean stockUpdated = seckillVoucherService.update()
