@@ -7,7 +7,7 @@
 > - 历史数据：`docs/rag_eval_report_20260503.md` / `20260504.md`
 > - 详情数据：`docs/rag_eval_judge_details_20260507.json`
 >
-> **关联仓库**：Plan A 的数据准备项目独立在 `F:\project\hm-dianping-data-prep`（hongwei7227-hub 同账号下另一个 repo）
+> **关联仓库**：Plan A 的数据准备项目独立在 `F:\project\data-prep`（hongwei7227-hub 同账号下另一个 repo）
 
 ---
 
@@ -38,7 +38,7 @@ Plan E: Hybrid Search 修复
 
 **起因**：业务原本只灌 14 条 Shop + 4 条 Blog，规模太小没法做真实 RAG 评估。
 
-**位置**：`F:\project\hm-dianping-data-prep`（独立项目，**不在本仓库**）
+**位置**：`F:\project\data-prep`（独立项目，**不在本仓库**）
 
 **做了什么**：
 1. 从 HuggingFace 拉 yf_dianping 数据集（330 万条评论）
@@ -52,7 +52,7 @@ Plan E: Hybrid Search 修复
 - 修法：并发 8 → 3、退避 ≥15s、5 次重试、宽容 JSON 解析（兜底正则）
 - 最终成功率 97.3%，剩余 42 个 LLM 输出 JSON 坏掉的我手工补完
 
-**产出**（在 `hm-dianping-data-prep/output/`）：
+**产出**（在 `data-prep/output/`）：
 - `shop_profile.jsonl` 1556 行
 - `blog_review.jsonl` 9538 行
 - `knowledge_qa.jsonl` 200 行

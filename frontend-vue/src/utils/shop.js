@@ -49,6 +49,9 @@ export function normalizeShop(raw) {
     sold: Number(raw?.sold || 0),
     commentCount: Number(raw?.comments || mock.comments?.length || 0),
     openHours: raw?.openHours || mock.openHours || '营业时间以门店为准',
+    // Layer 2: 透出后端坐标给 AI agent 结构化字段（== null 同时挡 undefined/null 但保留 0）
+    x: raw?.x == null ? null : Number(raw.x),
+    y: raw?.y == null ? null : Number(raw.y),
     raw
   };
 }

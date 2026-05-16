@@ -34,17 +34,16 @@ function wait(duration) {
   return new Promise((resolve) => setTimeout(resolve, duration));
 }
 
-function buildPrompt(message, currentShop) {
-  if (!currentShop) {
-    return message;
+// Layer 2 协议：店铺上下文走 shopId/x/y 独立字段，不再拼进 prompt 字符串。
+// 后端 AgentChatRequest 用 @JsonAlias("content") 让 content 字段反序列化到 prompt（向后兼容）。
+function buildChatPayload(conversationId, message, currentShop) {
+  const payload = { conversationId, content: message };
+  if (currentShop) {
+    if (currentShop.id != null) payload.shopId = Number(currentShop.id);
+    if (currentShop.x != null) payload.x = Number(currentShop.x);
+    if (currentShop.y != null) payload.y = Number(currentShop.y);
   }
-  return [
-    `当前店铺ID=${currentShop.id}`,
-    `店铺名称：${currentShop.name}`,
-    `店铺地址：${currentShop.address}`,
-    `人均：${currentShop.price}`,
-    `用户问题：${message}`
-  ].join('\n');
+  return payload;
 }
 
 function toRecommendCards(items = []) {
@@ -463,16 +462,15 @@ export const useAiStore = defineStore('ai', {
       const conversationId = await this.ensureConversation();
       const beforeMessages = await aiApi.getMessages(conversationId).catch(() => []);
       const lastAssistantId = Math.max(0, ...beforeMessages.filter((item) => item.role === 'assistant').map((item) => Number(item.id) || 0));
-      const prompt = buildPrompt(message, currentShop);
+      const chatPayload = buildChatPayload(conversationId, message, currentShop);
 
       try {
-        const streamedReply = await this.askBackendByStream({ conversationId, prompt, lastAssistantId, loadingId });
+        const streamedReply = await this.askBackendByStream({ chatPayload, lastAssistantId, loadingId });
         this.mode = 'backend';
         return streamedReply;
       } catch (error) {
         const pollingReply = await this.waitAssistantByPolling({
-          conversationId,
-          prompt,
+          chatPayload,
           lastAssistantId,
           loadingId,
           shouldSend: error?.chatSent !== true
@@ -481,7 +479,7 @@ export const useAiStore = defineStore('ai', {
         return pollingReply;
       }
     },
-    async askBackendByStream({ conversationId, prompt, lastAssistantId, loadingId }) {
+    async askBackendByStream({ chatPayload, lastAssistantId, loadingId }) {
       const abortController = new AbortController();
       let chatSent = false;
 
@@ -491,7 +489,7 @@ export const useAiStore = defineStore('ai', {
           let streamingStarted = false;
           let streamingBuffer = '';
 
-          aiApi.streamConversation(conversationId, {
+          aiApi.streamConversation(chatPayload.conversationId, {
             signal: abortController.signal,
             onEvent: (event) => {
               const payload = event?.data?.payload ?? event?.data ?? {};
@@ -549,7 +547,7 @@ export const useAiStore = defineStore('ai', {
           });
         });
 
-        await aiApi.chat({ conversationId, content: prompt });
+        await aiApi.chat(chatPayload);
         chatSent = true;
 
         return await Promise.race([
@@ -565,15 +563,15 @@ export const useAiStore = defineStore('ai', {
         abortController.abort();
       }
     },
-    async waitAssistantByPolling({ conversationId, prompt, lastAssistantId, loadingId, shouldSend = true }) {
+    async waitAssistantByPolling({ chatPayload, lastAssistantId, loadingId, shouldSend = true }) {
       if (shouldSend) {
-        await aiApi.chat({ conversationId, content: prompt });
+        await aiApi.chat(chatPayload);
       }
 
       for (let attempt = 0; attempt < AI_POLL_ATTEMPTS; attempt += 1) {
         this.updateMessageContent(loadingId, `正在思考中，请稍候...\n已切换到轮询模式（第 ${attempt + 1} 次检查）`);
         await wait(1200);
-        const messages = await aiApi.getMessages(conversationId);
+        const messages = await aiApi.getMessages(chatPayload.conversationId);
         const latestAssistant = [...messages]
           .reverse()
           .find((item) => item.role === 'assistant' && (Number(item.id) || 0) > lastAssistantId);
