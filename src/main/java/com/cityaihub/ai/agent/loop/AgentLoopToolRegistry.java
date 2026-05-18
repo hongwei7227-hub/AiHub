@@ -1,8 +1,8 @@
-package com.hmdp.ai.agent.loop;
+package com.cityaihub.ai.agent.loop;
 
-import com.hmdp.ai.tool.AgentLoopControlTools;
-import com.hmdp.ai.tool.DianPingAgentTools;
-import com.hmdp.ai.tool.LocalLifeTools;
+import com.cityaihub.ai.tool.AgentLoopControlTools;
+import com.cityaihub.ai.tool.DianPingAgentTools;
+import com.cityaihub.ai.tool.LocalLifeTools;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.mcp.SyncMcpToolCallbackProvider;
 import org.springframework.ai.support.ToolCallbacks;

@@ -1,13 +1,13 @@
-package com.hmdp.ai.service;
+package com.cityaihub.ai.service;
 
-import com.hmdp.ai.dto.AgentRecommendRequest;
-import com.hmdp.ai.dto.AgentRecommendResponse;
-import com.hmdp.ai.dto.ConversationSummaryDTO;
-import com.hmdp.ai.dto.IndexRebuildResponse;
-import com.hmdp.ai.dto.MessageDTO;
-import com.hmdp.ai.dto.ShopInsightResponse;
-import com.hmdp.dto.CreateChatMessageRequest;
-import com.hmdp.dto.CreateChatMessageResponse;
+import com.cityaihub.ai.dto.AgentRecommendRequest;
+import com.cityaihub.ai.dto.AgentRecommendResponse;
+import com.cityaihub.ai.dto.ConversationSummaryDTO;
+import com.cityaihub.ai.dto.IndexRebuildResponse;
+import com.cityaihub.ai.dto.MessageDTO;
+import com.cityaihub.ai.dto.ShopInsightResponse;
+import com.cityaihub.dto.CreateChatMessageRequest;
+import com.cityaihub.dto.CreateChatMessageResponse;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;

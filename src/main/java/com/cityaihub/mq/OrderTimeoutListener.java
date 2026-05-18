@@ -1,8 +1,8 @@
-package com.hmdp.mq;
+package com.cityaihub.mq;
 
-import com.hmdp.config.RocketMQConstants;
-import com.hmdp.service.IVoucherOrderService;
-import com.hmdp.utils.SimpleRedisLock;
+import com.cityaihub.config.RocketMQConstants;
+import com.cityaihub.service.IVoucherOrderService;
+import com.cityaihub.utils.SimpleRedisLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.annotation.ConsumeMode;
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
 
-import static com.hmdp.utils.RedisConstants.ORDER_TIMEOUT_LOCK_PREFIX;
+import static com.cityaihub.utils.RedisConstants.ORDER_TIMEOUT_LOCK_PREFIX;
 
 @Slf4j
 @Component

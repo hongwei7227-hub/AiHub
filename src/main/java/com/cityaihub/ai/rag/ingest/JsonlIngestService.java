@@ -1,11 +1,11 @@
-package com.hmdp.ai.rag.ingest;
+package com.cityaihub.ai.rag.ingest;
 
-import com.hmdp.ai.rag.AiMetadataConstants;
-import com.hmdp.ai.rag.dto.KnowledgeDoc;
-import com.hmdp.ai.rag.dto.ReviewDoc;
-import com.hmdp.ai.rag.indexer.ShopProfileDocumentBuilder;
-import com.hmdp.entity.Shop;
-import com.hmdp.service.IShopService;
+import com.cityaihub.ai.rag.AiMetadataConstants;
+import com.cityaihub.ai.rag.dto.KnowledgeDoc;
+import com.cityaihub.ai.rag.dto.ReviewDoc;
+import com.cityaihub.ai.rag.indexer.ShopProfileDocumentBuilder;
+import com.cityaihub.entity.Shop;
+import com.cityaihub.service.IShopService;
 import io.milvus.client.MilvusServiceClient;
 import io.milvus.param.collection.DropCollectionParam;
 import io.milvus.param.collection.HasCollectionParam;

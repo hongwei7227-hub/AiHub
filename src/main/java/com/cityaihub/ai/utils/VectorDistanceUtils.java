@@ -1,4 +1,4 @@
-package com.hmdp.ai.utils;
+package com.cityaihub.ai.utils;
 
 public class VectorDistanceUtils {
     

@@ -10,7 +10,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.hmdp</groupId>
+    <groupId>com.cityaihub</groupId>
     <artifactId>cityaihub</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>cityaihub</name>

@@ -1,9 +1,9 @@
-package com.hmdp.ai.agent.loop;
+package com.cityaihub.ai.agent.loop;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hmdp.ai.agent.prompt.AgentLoopPromptProvider;
-import com.hmdp.ai.config.AiAgentProperties;
-import com.hmdp.ai.tool.AgentLoopControlTools;
+import com.cityaihub.ai.agent.prompt.AgentLoopPromptProvider;
+import com.cityaihub.ai.config.AiAgentProperties;
+import com.cityaihub.ai.tool.AgentLoopControlTools;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;

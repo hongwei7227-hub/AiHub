@@ -1,4 +1,4 @@
-package com.hmdp.ai.constants;
+package com.cityaihub.ai.constants;
 
 public class SystemConstants {
 

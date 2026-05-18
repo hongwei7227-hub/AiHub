@@ -1,4 +1,4 @@
-package com.hmdp.ai.agent.loop;
+package com.cityaihub.ai.agent.loop;
 
 import lombok.Data;
 import org.springframework.ai.chat.messages.Message;

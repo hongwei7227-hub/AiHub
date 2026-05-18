@@ -1,4 +1,4 @@
-package com.hmdp.dto;
+package com.cityaihub.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

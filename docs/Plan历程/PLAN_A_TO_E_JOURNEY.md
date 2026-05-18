@@ -346,7 +346,7 @@ Plan B 试过 `dropCollection` → Spring AI Bean 不重跑 createCollection →
 
 ## 文件清单（按 Plan 归类）
 
-### Plan B 新增（`src/main/java/com/hmdp/ai/rag/eval/`）
+### Plan B 新增（`src/main/java/com/cityaihub/ai/rag/eval/`）
 - `RecallEvaluator.java` —— ID 比对评估器
 - `EmbeddingCache.java` / `EvalConfig.java` / `EvalResult.java` / `AggregatedReport.java`
 - `FilterExperimentRunner.java` —— Metadata filter 对比实验
@@ -354,7 +354,7 @@ Plan B 试过 `dropCollection` → Spring AI Bean 不重跑 createCollection →
 - `EvalReportWriter.java` —— Markdown 报告生成
 - `src/test/java/.../EvalRunnerTest.java` + `IngestRunnerTest.java`
 
-### Plan B ingest（`src/main/java/com/hmdp/ai/rag/ingest/`）
+### Plan B ingest（`src/main/java/com/cityaihub/ai/rag/ingest/`）
 - `JsonlIngestService.java` / `JsonlReader.java` / `IngestStat.java`
 - 4 个 DTO（`ShopProfileDoc / ReviewDoc / KnowledgeDoc / EvalQuery`）
 
@@ -370,7 +370,7 @@ Plan B 试过 `dropCollection` → Spring AI Bean 不重跑 createCollection →
 - `GenerationReport.java`
 - `EvalReportWriter` 加 Section 5.7（5 个子 section）
 
-### Plan E 新增（`src/main/java/com/hmdp/ai/rag/retriever/`）
+### Plan E 新增（`src/main/java/com/cityaihub/ai/rag/retriever/`）
 - `Bm25Index.java` —— Lucene 内存倒排
 - `HybridRagRetriever.java` —— RRF 合并包装层
 - `EvalReportWriter` 加 Section 5.7.6 + Section 0 修复

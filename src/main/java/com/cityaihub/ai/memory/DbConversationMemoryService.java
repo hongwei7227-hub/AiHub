@@ -1,13 +1,13 @@
-package com.hmdp.ai.memory;
+package com.cityaihub.ai.memory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hmdp.ai.dto.ConversationSummaryDTO;
-import com.hmdp.ai.dto.MessageDTO;
-import com.hmdp.ai.entity.AiConversation;
-import com.hmdp.ai.entity.AiMessage;
-import com.hmdp.ai.service.AiConversationService;
-import com.hmdp.ai.service.AiMessageService;
+import com.cityaihub.ai.dto.ConversationSummaryDTO;
+import com.cityaihub.ai.dto.MessageDTO;
+import com.cityaihub.ai.entity.AiConversation;
+import com.cityaihub.ai.entity.AiMessage;
+import com.cityaihub.ai.service.AiConversationService;
+import com.cityaihub.ai.service.AiMessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;

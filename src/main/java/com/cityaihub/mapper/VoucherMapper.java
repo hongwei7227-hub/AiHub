@@ -1,7 +1,7 @@
-package com.hmdp.mapper;
+package com.cityaihub.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.hmdp.entity.Voucher;
+import com.cityaihub.entity.Voucher;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 

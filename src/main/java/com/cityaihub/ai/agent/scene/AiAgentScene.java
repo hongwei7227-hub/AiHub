@@ -1,4 +1,4 @@
-package com.hmdp.ai.agent.scene;
+package com.cityaihub.ai.agent.scene;
 
 public enum AiAgentScene {
     CHAT,

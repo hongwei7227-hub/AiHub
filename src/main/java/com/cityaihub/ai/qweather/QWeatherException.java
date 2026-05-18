@@ -1,4 +1,4 @@
-package com.hmdp.ai.qweather;
+package com.cityaihub.ai.qweather;
 
 /**
  * Plan: 和风天气 API 调用统一异常。任何环节（JWT 签发、HTTP、JSON parse、code != "200"）

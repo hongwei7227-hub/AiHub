@@ -1,10 +1,10 @@
-package com.hmdp.controller;
+package com.cityaihub.controller;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
-import com.hmdp.dto.Result;
-import com.hmdp.utils.SlidingWindowLimit;
-import com.hmdp.utils.SystemConstants;
+import com.cityaihub.dto.Result;
+import com.cityaihub.utils.SlidingWindowLimit;
+import com.cityaihub.utils.SystemConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;

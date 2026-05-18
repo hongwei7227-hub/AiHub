@@ -1,7 +1,7 @@
-package com.hmdp.ai.agent.loop;
+package com.cityaihub.ai.agent.loop;
 
-import com.hmdp.ai.agent.scene.AiAgentScene;
-import com.hmdp.component.AgentLoopObserver;
+import com.cityaihub.ai.agent.scene.AiAgentScene;
+import com.cityaihub.component.AgentLoopObserver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

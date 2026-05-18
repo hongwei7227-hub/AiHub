@@ -1,6 +1,6 @@
-package com.hmdp.mapper;
+package com.cityaihub.mapper;
 
-import com.hmdp.entity.Shop;
+import com.cityaihub.entity.Shop;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;

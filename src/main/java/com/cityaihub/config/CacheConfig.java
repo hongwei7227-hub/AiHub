@@ -1,4 +1,4 @@
-package com.hmdp.config;
+package com.cityaihub.config;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;

@@ -1,4 +1,4 @@
-package com.hmdp.utils;
+package com.cityaihub.utils;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;

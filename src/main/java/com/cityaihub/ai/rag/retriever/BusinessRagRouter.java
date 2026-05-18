@@ -1,8 +1,8 @@
-package com.hmdp.ai.rag.retriever;
+package com.cityaihub.ai.rag.retriever;
 
-import com.hmdp.ai.dto.BlogVectorHitDTO;
-import com.hmdp.ai.dto.KnowledgeHitDTO;
-import com.hmdp.ai.dto.ShopToolDTO;
+import com.cityaihub.ai.dto.BlogVectorHitDTO;
+import com.cityaihub.ai.dto.KnowledgeHitDTO;
+import com.cityaihub.ai.dto.ShopToolDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,7 +15,7 @@ import java.util.function.Function;
 /**
  * Plan G+：业务侧 RAG 检索路由层。
  *
- * <p>把"模式 dispatch + 故障降级"从 {@link com.hmdp.ai.tool.DianPingAgentTools} 的 @Tool 方法
+ * <p>把"模式 dispatch + 故障降级"从 {@link com.cityaihub.ai.tool.DianPingAgentTools} 的 @Tool 方法
  * 里抽出来，让工具方法只负责 @Tool 注解定义，路由逻辑独立可测。
  *
  * <p><b>三档模式</b>（由 {@code rag.business.retrieval-mode} 配置）：

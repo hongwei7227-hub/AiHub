@@ -1,9 +1,9 @@
-package com.hmdp.service;
+package com.cityaihub.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.hmdp.dto.LoginFormDTO;
-import com.hmdp.dto.Result;
-import com.hmdp.entity.User;
+import com.cityaihub.dto.LoginFormDTO;
+import com.cityaihub.dto.Result;
+import com.cityaihub.entity.User;
 
 import jakarta.servlet.http.HttpSession;
 

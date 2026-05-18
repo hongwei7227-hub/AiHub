@@ -1,4 +1,4 @@
-package com.hmdp;
+package com.cityaihub;
 
 import org.junit.jupiter.api.Test;
 import org.redisson.api.RBloomFilter;

@@ -1,10 +1,10 @@
-package com.hmdp.ai.rag.retriever;
+package com.cityaihub.ai.rag.retriever;
 
-import com.hmdp.ai.config.AiAgentProperties;
-import com.hmdp.ai.dto.BlogVectorHitDTO;
-import com.hmdp.ai.dto.KnowledgeHitDTO;
-import com.hmdp.ai.dto.ShopToolDTO;
-import com.hmdp.ai.rag.AiMetadataConstants;
+import com.cityaihub.ai.config.AiAgentProperties;
+import com.cityaihub.ai.dto.BlogVectorHitDTO;
+import com.cityaihub.ai.dto.KnowledgeHitDTO;
+import com.cityaihub.ai.dto.ShopToolDTO;
+import com.cityaihub.ai.rag.AiMetadataConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;

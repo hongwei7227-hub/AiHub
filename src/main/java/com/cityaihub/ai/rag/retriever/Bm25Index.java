@@ -1,4 +1,4 @@
-package com.hmdp.ai.rag.retriever;
+package com.cityaihub.ai.rag.retriever;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -1,4 +1,4 @@
-package com.hmdp.component;
+package com.cityaihub.component;
 
 import org.springframework.stereotype.Component;
 

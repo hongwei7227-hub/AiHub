@@ -1,10 +1,10 @@
-package com.hmdp.seckill;
+package com.cityaihub.seckill;
 
-import com.hmdp.entity.User;
-import com.hmdp.entity.Voucher;
-import com.hmdp.mapper.UserMapper;
-import com.hmdp.service.IVoucherService;
-import com.hmdp.utils.RedisConstants;
+import com.cityaihub.entity.User;
+import com.cityaihub.entity.Voucher;
+import com.cityaihub.mapper.UserMapper;
+import com.cityaihub.service.IVoucherService;
+import com.cityaihub.utils.RedisConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;

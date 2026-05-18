@@ -1,4 +1,4 @@
-package com.hmdp.ai.entity;
+package com.cityaihub.ai.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;

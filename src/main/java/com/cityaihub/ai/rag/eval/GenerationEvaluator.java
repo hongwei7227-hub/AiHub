@@ -1,6 +1,6 @@
-package com.hmdp.ai.rag.eval;
+package com.cityaihub.ai.rag.eval;
 
-import com.hmdp.ai.rag.dto.EvalQuery;
+import com.cityaihub.ai.rag.dto.EvalQuery;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

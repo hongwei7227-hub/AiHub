@@ -1,11 +1,11 @@
-package com.hmdp.ai.qweather;
+package com.cityaihub.ai.qweather;
 
-import com.hmdp.ai.config.AiAgentProperties;
-import com.hmdp.ai.dto.WeatherDiningAdviceDTO;
-import com.hmdp.ai.qweather.dto.AirQualityDTO;
-import com.hmdp.ai.qweather.dto.DailyForecastDTO;
-import com.hmdp.ai.qweather.dto.LifeIndexDTO;
-import com.hmdp.ai.qweather.dto.WeatherNowDTO;
+import com.cityaihub.ai.config.AiAgentProperties;
+import com.cityaihub.ai.dto.WeatherDiningAdviceDTO;
+import com.cityaihub.ai.qweather.dto.AirQualityDTO;
+import com.cityaihub.ai.qweather.dto.DailyForecastDTO;
+import com.cityaihub.ai.qweather.dto.LifeIndexDTO;
+import com.cityaihub.ai.qweather.dto.WeatherNowDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;

@@ -1,11 +1,11 @@
-package com.hmdp;
+package com.cityaihub;
 
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@MapperScan("com.hmdp.mapper")
+@MapperScan("com.cityaihub.mapper")
 @SpringBootApplication
 @EnableScheduling
 public class CityAIHubApplication {

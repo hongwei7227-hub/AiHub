@@ -1,4 +1,4 @@
-package com.hmdp.ai.config;
+package com.cityaihub.ai.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

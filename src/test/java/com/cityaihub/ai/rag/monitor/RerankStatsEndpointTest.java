@@ -1,6 +1,6 @@
-package com.hmdp.ai.rag.monitor;
+package com.cityaihub.ai.rag.monitor;
 
-import com.hmdp.ai.rag.retriever.Bge3Reranker;
+import com.cityaihub.ai.rag.retriever.Bge3Reranker;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;

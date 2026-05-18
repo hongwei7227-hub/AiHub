@@ -1,4 +1,4 @@
-package com.hmdp.ai.tavily;
+package com.cityaihub.ai.tavily;
 
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;

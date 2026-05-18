@@ -1,13 +1,13 @@
-package com.hmdp.ai.qweather;
+package com.cityaihub.ai.qweather;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hmdp.ai.config.AiAgentProperties;
-import com.hmdp.ai.qweather.dto.AirQualityDTO;
-import com.hmdp.ai.qweather.dto.DailyForecastDTO;
-import com.hmdp.ai.qweather.dto.LifeIndexDTO;
-import com.hmdp.ai.qweather.dto.WeatherNowDTO;
+import com.cityaihub.ai.config.AiAgentProperties;
+import com.cityaihub.ai.qweather.dto.AirQualityDTO;
+import com.cityaihub.ai.qweather.dto.DailyForecastDTO;
+import com.cityaihub.ai.qweather.dto.LifeIndexDTO;
+import com.cityaihub.ai.qweather.dto.WeatherNowDTO;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

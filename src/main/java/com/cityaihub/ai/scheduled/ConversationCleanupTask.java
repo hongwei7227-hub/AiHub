@@ -1,10 +1,10 @@
-package com.hmdp.ai.scheduled;
+package com.cityaihub.ai.scheduled;
 
-import com.hmdp.ai.config.AiAgentProperties;
-import com.hmdp.ai.entity.AiConversation;
-import com.hmdp.ai.entity.AiMessage;
-import com.hmdp.ai.service.AiConversationService;
-import com.hmdp.ai.service.AiMessageService;
+import com.cityaihub.ai.config.AiAgentProperties;
+import com.cityaihub.ai.entity.AiConversation;
+import com.cityaihub.ai.entity.AiMessage;
+import com.cityaihub.ai.service.AiConversationService;
+import com.cityaihub.ai.service.AiMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

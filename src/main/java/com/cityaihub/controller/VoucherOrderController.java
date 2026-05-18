@@ -1,9 +1,9 @@
-package com.hmdp.controller;
+package com.cityaihub.controller;
 
 
-import com.hmdp.dto.Result;
-import com.hmdp.service.IVoucherOrderService;
-import com.hmdp.utils.SlidingWindowLimit;
+import com.cityaihub.dto.Result;
+import com.cityaihub.service.IVoucherOrderService;
+import com.cityaihub.utils.SlidingWindowLimit;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

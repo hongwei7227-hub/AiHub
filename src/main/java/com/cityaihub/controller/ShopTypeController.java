@@ -1,10 +1,10 @@
-package com.hmdp.controller;
+package com.cityaihub.controller;
 
 
-import com.hmdp.dto.Result;
-import com.hmdp.entity.ShopType;
-import com.hmdp.service.IShopTypeService;
-import com.hmdp.utils.SlidingWindowLimit;
+import com.cityaihub.dto.Result;
+import com.cityaihub.entity.ShopType;
+import com.cityaihub.service.IShopTypeService;
+import com.cityaihub.utils.SlidingWindowLimit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

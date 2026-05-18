@@ -1,19 +1,19 @@
-package com.hmdp.service.impl;
+package com.cityaihub.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hmdp.config.RocketMQConstants;
-import com.hmdp.dto.Result;
-import com.hmdp.entity.SeckillVoucher;
-import com.hmdp.entity.Voucher;
-import com.hmdp.entity.VoucherOrder;
-import com.hmdp.mapper.VoucherOrderMapper;
-import com.hmdp.service.ISeckillVoucherService;
-import com.hmdp.service.IVoucherOrderService;
-import com.hmdp.service.IVoucherService;
-import com.hmdp.utils.RedisIdWorker;
-import com.hmdp.utils.UserHolder;
+import com.cityaihub.config.RocketMQConstants;
+import com.cityaihub.dto.Result;
+import com.cityaihub.entity.SeckillVoucher;
+import com.cityaihub.entity.Voucher;
+import com.cityaihub.entity.VoucherOrder;
+import com.cityaihub.mapper.VoucherOrderMapper;
+import com.cityaihub.service.ISeckillVoucherService;
+import com.cityaihub.service.IVoucherOrderService;
+import com.cityaihub.service.IVoucherService;
+import com.cityaihub.utils.RedisIdWorker;
+import com.cityaihub.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.core.io.ClassPathResource;
@@ -27,9 +27,9 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
-import static com.hmdp.utils.RedisConstants.SECKILL_ORDER_PENDING_KEY;
-import static com.hmdp.utils.RedisConstants.SECKILL_ORDER_PENDING_TTL_MINUTES;
-import static com.hmdp.utils.RedisConstants.SECKILL_STOCK_KEY;
+import static com.cityaihub.utils.RedisConstants.SECKILL_ORDER_PENDING_KEY;
+import static com.cityaihub.utils.RedisConstants.SECKILL_ORDER_PENDING_TTL_MINUTES;
+import static com.cityaihub.utils.RedisConstants.SECKILL_STOCK_KEY;
 
 @Slf4j
 @Service

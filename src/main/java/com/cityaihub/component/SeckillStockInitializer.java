@@ -1,7 +1,7 @@
-package com.hmdp.component;
+package com.cityaihub.component;
 
-import com.hmdp.entity.SeckillVoucher;
-import com.hmdp.service.ISeckillVoucherService;
+import com.cityaihub.entity.SeckillVoucher;
+import com.cityaihub.service.ISeckillVoucherService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 import jakarta.annotation.Resource;
 import java.util.List;
 
-import static com.hmdp.utils.RedisConstants.SECKILL_STOCK_KEY;
+import static com.cityaihub.utils.RedisConstants.SECKILL_STOCK_KEY;
 
 /**
  * 启动时将数据库中的秒杀库存同步到 Redis，避免旧数据没有经过新增接口时缺少库存 Key。

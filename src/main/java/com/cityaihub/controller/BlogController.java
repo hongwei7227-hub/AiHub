@@ -1,14 +1,14 @@
-package com.hmdp.controller;
+package com.cityaihub.controller;
 
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.hmdp.dto.Result;
-import com.hmdp.dto.UserDTO;
-import com.hmdp.entity.Blog;
-import com.hmdp.service.IBlogService;
-import com.hmdp.utils.SlidingWindowLimit;
-import com.hmdp.utils.SystemConstants;
-import com.hmdp.utils.UserHolder;
+import com.cityaihub.dto.Result;
+import com.cityaihub.dto.UserDTO;
+import com.cityaihub.entity.Blog;
+import com.cityaihub.service.IBlogService;
+import com.cityaihub.utils.SlidingWindowLimit;
+import com.cityaihub.utils.SystemConstants;
+import com.cityaihub.utils.UserHolder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.annotation.Resource;

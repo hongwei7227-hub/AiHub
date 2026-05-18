@@ -1,6 +1,6 @@
-package com.hmdp.ai.rag.monitor;
+package com.cityaihub.ai.rag.monitor;
 
-import com.hmdp.ai.rag.retriever.Bge3Reranker;
+import com.cityaihub.ai.rag.retriever.Bge3Reranker;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;

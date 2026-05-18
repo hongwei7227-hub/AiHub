@@ -1,6 +1,6 @@
-package com.hmdp.mapper;
+package com.cityaihub.mapper;
 
-import com.hmdp.entity.ShopType;
+import com.cityaihub.entity.ShopType;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**

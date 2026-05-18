@@ -1,4 +1,4 @@
-package com.hmdp.ai.config;
+package com.cityaihub.ai.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;

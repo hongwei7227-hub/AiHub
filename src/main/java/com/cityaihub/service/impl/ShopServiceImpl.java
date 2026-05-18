@@ -1,14 +1,14 @@
-package com.hmdp.service.impl;
+package com.cityaihub.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.hmdp.dto.Result;
-import com.hmdp.entity.Shop;
-import com.hmdp.mapper.ShopMapper;
-import com.hmdp.service.IShopService;
-import com.hmdp.utils.CacheClient;
-import com.hmdp.utils.SystemConstants;
+import com.cityaihub.dto.Result;
+import com.cityaihub.entity.Shop;
+import com.cityaihub.mapper.ShopMapper;
+import com.cityaihub.service.IShopService;
+import com.cityaihub.utils.CacheClient;
+import com.cityaihub.utils.SystemConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBloomFilter;
 import org.springframework.data.geo.Distance;
@@ -24,7 +24,7 @@ import jakarta.annotation.Resource;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import static com.hmdp.utils.RedisConstants.*;
+import static com.cityaihub.utils.RedisConstants.*;
 
 /**
  * <p>

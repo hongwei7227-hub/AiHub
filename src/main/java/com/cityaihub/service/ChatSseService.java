@@ -1,6 +1,6 @@
-package com.hmdp.service;
+package com.cityaihub.service;
 
-import com.hmdp.dto.ChatStreamEvent;
+import com.cityaihub.dto.ChatStreamEvent;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 public interface ChatSseService {

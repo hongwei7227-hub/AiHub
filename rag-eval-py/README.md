@@ -179,7 +179,7 @@ python test_faithfulness.py
 
 ### Java 集成建议
 
-在 `com.hmdp.ai.rag.eval` 包下新增：
+在 `com.cityaihub.ai.rag.eval` 包下新增：
 
 ```java
 // 1. 数据类

@@ -1,4 +1,4 @@
-package com.hmdp.ai.rag.eval;
+package com.cityaihub.ai.rag.eval;
 
 import lombok.Data;
 

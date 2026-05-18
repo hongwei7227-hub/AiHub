@@ -1,10 +1,10 @@
-package com.hmdp.controller;
+package com.cityaihub.controller;
 
-import com.hmdp.dto.Result;
-import com.hmdp.entity.VoucherOrder;
-import com.hmdp.service.IPaymentService;
-import com.hmdp.service.IVoucherOrderService;
-import com.hmdp.utils.UserHolder;
+import com.cityaihub.dto.Result;
+import com.cityaihub.entity.VoucherOrder;
+import com.cityaihub.service.IPaymentService;
+import com.cityaihub.service.IVoucherOrderService;
+import com.cityaihub.utils.UserHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;

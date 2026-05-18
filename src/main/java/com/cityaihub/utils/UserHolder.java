@@ -1,6 +1,6 @@
-package com.hmdp.utils;
+package com.cityaihub.utils;
 
-import com.hmdp.dto.UserDTO;
+import com.cityaihub.dto.UserDTO;
 
 public class UserHolder {
     private static final ThreadLocal<UserDTO> tl = new ThreadLocal<>();

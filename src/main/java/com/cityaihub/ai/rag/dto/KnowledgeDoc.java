@@ -1,4 +1,4 @@
-package com.hmdp.ai.rag.dto;
+package com.cityaihub.ai.rag.dto;
 
 import lombok.Data;
 

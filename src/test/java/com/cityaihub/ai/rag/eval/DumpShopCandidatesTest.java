@@ -1,7 +1,7 @@
-package com.hmdp.ai.rag.eval;
+package com.cityaihub.ai.rag.eval;
 
-import com.hmdp.ai.rag.dto.EvalQuery;
-import com.hmdp.ai.rag.ingest.JsonlReader;
+import com.cityaihub.ai.rag.dto.EvalQuery;
+import com.cityaihub.ai.rag.ingest.JsonlReader;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;

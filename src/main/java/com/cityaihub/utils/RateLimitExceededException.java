@@ -1,4 +1,4 @@
-package com.hmdp.utils;
+package com.cityaihub.utils;
 
 /**
  * 限流异常类

@@ -1,15 +1,15 @@
-package com.hmdp;
+package com.cityaihub;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
-import com.hmdp.dto.UserDTO;
-import com.hmdp.entity.SeckillVoucher;
-import com.hmdp.entity.Shop;
-import com.hmdp.entity.User;
-import com.hmdp.service.impl.SeckillVoucherServiceImpl;
-import com.hmdp.service.impl.ShopServiceImpl;
-import com.hmdp.utils.CacheClient;
-import com.hmdp.utils.RedisIdWorker;
+import com.cityaihub.dto.UserDTO;
+import com.cityaihub.entity.SeckillVoucher;
+import com.cityaihub.entity.Shop;
+import com.cityaihub.entity.User;
+import com.cityaihub.service.impl.SeckillVoucherServiceImpl;
+import com.cityaihub.service.impl.ShopServiceImpl;
+import com.cityaihub.utils.CacheClient;
+import com.cityaihub.utils.RedisIdWorker;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.geo.Point;
@@ -30,8 +30,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.hmdp.utils.RedisConstants.CACHE_SHOP_KEY;
-import static com.hmdp.utils.RedisConstants.SHOP_GEO_KEY;
+import static com.cityaihub.utils.RedisConstants.CACHE_SHOP_KEY;
+import static com.cityaihub.utils.RedisConstants.SHOP_GEO_KEY;
 import cn.hutool.core.lang.UUID;
 @SpringBootTest
 class CityAIHubApplicationTests {

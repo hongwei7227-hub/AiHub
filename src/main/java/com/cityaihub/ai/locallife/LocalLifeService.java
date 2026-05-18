@@ -1,6 +1,6 @@
-package com.hmdp.ai.locallife;
+package com.cityaihub.ai.locallife;
 
-import com.hmdp.ai.dto.RouteAdviceDTO;
+import com.cityaihub.ai.dto.RouteAdviceDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -8,8 +8,8 @@ import org.springframework.util.StringUtils;
 /**
  * Plan: 本地生活路线建议（Haversine 公式估算）。
  *
- * <p>从原 {@code com.hmdp.ai.mcp.LocalLifeMcpService} 拆出路线部分，搬到 {@code com.hmdp.ai.locallife} 包。
- * 天气能力已分离到 {@link com.hmdp.ai.qweather.WeatherAdvisoryService}（接和风 API）。
+ * <p>从原 {@code com.cityaihub.ai.mcp.LocalLifeMcpService} 拆出路线部分，搬到 {@code com.cityaihub.ai.locallife} 包。
+ * 天气能力已分离到 {@link com.cityaihub.ai.qweather.WeatherAdvisoryService}（接和风 API）。
  *
  * <p>为什么路线保留本地：Haversine 计算坐标距离已足够回答"多远 / 步行 or 打车"，
  * 接外部地图 API 的边际收益（实时路况）不匹配本地生活推荐场景的精度需求。

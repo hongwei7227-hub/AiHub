@@ -1,9 +1,9 @@
-package com.hmdp.ai.config;
+package com.cityaihub.ai.config;
 
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@MapperScan("com.hmdp.ai.mapper")
+@MapperScan("com.cityaihub.ai.mapper")
 public class AiMapperConfiguration {
 }

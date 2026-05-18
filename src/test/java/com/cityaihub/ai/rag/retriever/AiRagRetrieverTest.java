@@ -1,8 +1,8 @@
-package com.hmdp.ai.rag.retriever;
+package com.cityaihub.ai.rag.retriever;
 
-import com.hmdp.ai.config.AiAgentProperties;
-import com.hmdp.ai.dto.KnowledgeHitDTO;
-import com.hmdp.ai.rag.AiMetadataConstants;
+import com.cityaihub.ai.config.AiAgentProperties;
+import com.cityaihub.ai.dto.KnowledgeHitDTO;
+import com.cityaihub.ai.rag.AiMetadataConstants;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;

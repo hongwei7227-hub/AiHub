@@ -1,4 +1,4 @@
-package com.hmdp.ai.rag;
+package com.cityaihub.ai.rag;
 
 public final class AiMetadataConstants {
 

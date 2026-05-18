@@ -1,9 +1,9 @@
-package com.hmdp.mq;
+package com.cityaihub.mq;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hmdp.config.RocketMQConstants;
-import com.hmdp.entity.VoucherOrder;
-import com.hmdp.service.IVoucherOrderService;
+import com.cityaihub.config.RocketMQConstants;
+import com.cityaihub.entity.VoucherOrder;
+import com.cityaihub.service.IVoucherOrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.annotation.ConsumeMode;

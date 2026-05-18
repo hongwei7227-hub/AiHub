@@ -1,6 +1,6 @@
-package com.hmdp.mapper;
+package com.cityaihub.mapper;
 
-import com.hmdp.entity.User;
+import com.cityaihub.entity.User;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**

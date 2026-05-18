@@ -1,4 +1,4 @@
-package com.hmdp.config;
+package com.cityaihub.config;
 
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;

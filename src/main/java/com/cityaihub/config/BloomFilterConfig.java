@@ -1,4 +1,4 @@
-package com.hmdp.config;
+package com.cityaihub.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBloomFilter;

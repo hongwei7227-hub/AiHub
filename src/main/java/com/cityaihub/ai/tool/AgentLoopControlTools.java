@@ -1,4 +1,4 @@
-package com.hmdp.ai.tool;
+package com.cityaihub.ai.tool;
 
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;

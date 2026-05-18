@@ -1,4 +1,4 @@
-package com.hmdp.ai.config;
+package com.cityaihub.ai.config;
 
 import io.milvus.client.MilvusServiceClient;
 import io.milvus.grpc.FieldSchema;

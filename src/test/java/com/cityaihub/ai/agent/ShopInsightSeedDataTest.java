@@ -1,12 +1,12 @@
-package com.hmdp.ai.agent;
+package com.cityaihub.ai.agent;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.hmdp.entity.Blog;
-import com.hmdp.entity.BlogComments;
-import com.hmdp.entity.Shop;
-import com.hmdp.mapper.BlogCommentsMapper;
-import com.hmdp.mapper.BlogMapper;
-import com.hmdp.mapper.ShopMapper;
+import com.cityaihub.entity.Blog;
+import com.cityaihub.entity.BlogComments;
+import com.cityaihub.entity.Shop;
+import com.cityaihub.mapper.BlogCommentsMapper;
+import com.cityaihub.mapper.BlogMapper;
+import com.cityaihub.mapper.ShopMapper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

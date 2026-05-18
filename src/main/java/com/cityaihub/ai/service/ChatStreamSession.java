@@ -1,4 +1,4 @@
-package com.hmdp.ai.service;
+package com.cityaihub.ai.service;
 
 import reactor.core.publisher.Flux;
 

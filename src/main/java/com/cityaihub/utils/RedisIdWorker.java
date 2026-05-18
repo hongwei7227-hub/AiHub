@@ -1,4 +1,4 @@
-package com.hmdp.utils;
+package com.cityaihub.utils;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;

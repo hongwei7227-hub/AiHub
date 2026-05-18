@@ -1,4 +1,4 @@
-package com.hmdp.utils;
+package com.cityaihub.utils;
 
 public class RedisConstants {
     public static final String LOGIN_CODE_KEY = "login:code:";

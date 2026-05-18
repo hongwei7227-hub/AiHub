@@ -1,4 +1,4 @@
-package com.hmdp.ai.dto;
+package com.cityaihub.ai.dto;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

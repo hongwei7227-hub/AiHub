@@ -1,12 +1,12 @@
-package com.hmdp.ai.rag.indexer;
+package com.cityaihub.ai.rag.indexer;
 
-import com.hmdp.ai.dto.IndexRebuildResponse;
-import com.hmdp.ai.rag.AiMetadataConstants;
-import com.hmdp.ai.rag.retriever.AiRagRetriever;
-import com.hmdp.entity.Blog;
-import com.hmdp.entity.Shop;
-import com.hmdp.service.IBlogService;
-import com.hmdp.service.IShopService;
+import com.cityaihub.ai.dto.IndexRebuildResponse;
+import com.cityaihub.ai.rag.AiMetadataConstants;
+import com.cityaihub.ai.rag.retriever.AiRagRetriever;
+import com.cityaihub.entity.Blog;
+import com.cityaihub.entity.Shop;
+import com.cityaihub.service.IBlogService;
+import com.cityaihub.service.IShopService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;

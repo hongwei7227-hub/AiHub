@@ -1,12 +1,12 @@
-package com.hmdp.service.impl;
+package com.cityaihub.service.impl;
 
-import com.hmdp.dto.Result;
-import com.hmdp.dto.UserDTO;
-import com.hmdp.entity.VoucherOrder;
-import com.hmdp.service.IPaymentService;
-import com.hmdp.service.IVoucherOrderService;
-import com.hmdp.utils.SimpleRedisLock;
-import com.hmdp.utils.UserHolder;
+import com.cityaihub.dto.Result;
+import com.cityaihub.dto.UserDTO;
+import com.cityaihub.entity.VoucherOrder;
+import com.cityaihub.service.IPaymentService;
+import com.cityaihub.service.IVoucherOrderService;
+import com.cityaihub.utils.SimpleRedisLock;
+import com.cityaihub.utils.UserHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -16,8 +16,8 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
-import static com.hmdp.utils.RedisConstants.ORDER_PAYMENT_LOCK_PREFIX;
-import static com.hmdp.utils.RedisConstants.SECKILL_ORDER_PENDING_KEY;
+import static com.cityaihub.utils.RedisConstants.ORDER_PAYMENT_LOCK_PREFIX;
+import static com.cityaihub.utils.RedisConstants.SECKILL_ORDER_PENDING_KEY;
 
 @Slf4j
 @Service

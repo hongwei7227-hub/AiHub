@@ -1,7 +1,7 @@
-package com.hmdp.ai.agent.prompt;
+package com.cityaihub.ai.agent.prompt;
 
-import com.hmdp.ai.agent.loop.AgentLoopRequest;
-import com.hmdp.ai.agent.loop.ToolExecutionLog;
+import com.cityaihub.ai.agent.loop.AgentLoopRequest;
+import com.cityaihub.ai.agent.loop.ToolExecutionLog;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;

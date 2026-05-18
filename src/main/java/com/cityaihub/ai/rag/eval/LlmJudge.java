@@ -1,4 +1,4 @@
-package com.hmdp.ai.rag.eval;
+package com.cityaihub.ai.rag.eval;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

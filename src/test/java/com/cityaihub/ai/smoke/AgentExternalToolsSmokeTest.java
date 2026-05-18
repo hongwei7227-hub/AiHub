@@ -1,7 +1,7 @@
-package com.hmdp.ai.smoke;
+package com.cityaihub.ai.smoke;
 
-import com.hmdp.ai.dto.WeatherDiningAdviceDTO;
-import com.hmdp.ai.qweather.WeatherAdvisoryService;
+import com.cityaihub.ai.dto.WeatherDiningAdviceDTO;
+import com.cityaihub.ai.qweather.WeatherAdvisoryService;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;

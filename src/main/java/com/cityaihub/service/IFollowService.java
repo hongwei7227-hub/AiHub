@@ -1,7 +1,7 @@
-package com.hmdp.service;
+package com.cityaihub.service;
 
-import com.hmdp.dto.Result;
-import com.hmdp.entity.Follow;
+import com.cityaihub.dto.Result;
+import com.cityaihub.entity.Follow;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**

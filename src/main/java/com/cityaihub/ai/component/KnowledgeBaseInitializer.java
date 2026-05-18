@@ -1,7 +1,7 @@
-package com.hmdp.ai.component;
+package com.cityaihub.ai.component;
 
-import com.hmdp.ai.config.AiAgentProperties;
-import com.hmdp.ai.rag.indexer.AiVectorIndexService;
+import com.cityaihub.ai.config.AiAgentProperties;
+import com.cityaihub.ai.rag.indexer.AiVectorIndexService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

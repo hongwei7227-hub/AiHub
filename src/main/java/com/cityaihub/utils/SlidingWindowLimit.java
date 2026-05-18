@@ -1,4 +1,4 @@
-package com.hmdp.utils;
+package com.cityaihub.utils;
 
 import java.lang.annotation.*;
 import java.util.concurrent.TimeUnit;

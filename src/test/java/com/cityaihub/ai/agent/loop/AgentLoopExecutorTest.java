@@ -1,6 +1,6 @@
-package com.hmdp.ai.agent.loop;
+package com.cityaihub.ai.agent.loop;
 
-import com.hmdp.component.AgentLoopObserver;
+import com.cityaihub.component.AgentLoopObserver;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

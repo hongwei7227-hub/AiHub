@@ -1,9 +1,9 @@
-package com.hmdp.ai.memory;
+package com.cityaihub.ai.memory;
 
-import com.hmdp.ai.dto.ConversationSummaryDTO;
-import com.hmdp.ai.dto.MessageDTO;
-import com.hmdp.ai.entity.AiConversation;
-import com.hmdp.ai.entity.AiMessage;
+import com.cityaihub.ai.dto.ConversationSummaryDTO;
+import com.cityaihub.ai.dto.MessageDTO;
+import com.cityaihub.ai.entity.AiConversation;
+import com.cityaihub.ai.entity.AiMessage;
 import org.springframework.ai.chat.messages.Message;
 
 import java.util.List;

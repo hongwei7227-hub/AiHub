@@ -1,4 +1,4 @@
-package com.hmdp.ai.qweather.dto;
+package com.cityaihub.ai.qweather.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;

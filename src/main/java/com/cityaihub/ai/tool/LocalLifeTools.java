@@ -1,9 +1,9 @@
-package com.hmdp.ai.tool;
+package com.cityaihub.ai.tool;
 
-import com.hmdp.ai.dto.RouteAdviceDTO;
-import com.hmdp.ai.dto.WeatherDiningAdviceDTO;
-import com.hmdp.ai.locallife.LocalLifeService;
-import com.hmdp.ai.qweather.WeatherAdvisoryService;
+import com.cityaihub.ai.dto.RouteAdviceDTO;
+import com.cityaihub.ai.dto.WeatherDiningAdviceDTO;
+import com.cityaihub.ai.locallife.LocalLifeService;
+import com.cityaihub.ai.qweather.WeatherAdvisoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;

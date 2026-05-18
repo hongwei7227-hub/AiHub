@@ -1,8 +1,8 @@
-package com.hmdp.ai.rag.retriever;
+package com.cityaihub.ai.rag.retriever;
 
-import com.hmdp.ai.dto.BlogVectorHitDTO;
-import com.hmdp.ai.dto.KnowledgeHitDTO;
-import com.hmdp.ai.dto.ShopToolDTO;
+import com.cityaihub.ai.dto.BlogVectorHitDTO;
+import com.cityaihub.ai.dto.KnowledgeHitDTO;
+import com.cityaihub.ai.dto.ShopToolDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

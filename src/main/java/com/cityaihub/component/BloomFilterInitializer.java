@@ -1,7 +1,7 @@
-package com.hmdp.component;
+package com.cityaihub.component;
 
-import com.hmdp.mapper.ShopMapper;
-import com.hmdp.mapper.VoucherMapper;
+import com.cityaihub.mapper.ShopMapper;
+import com.cityaihub.mapper.VoucherMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBloomFilter;
 import org.springframework.boot.ApplicationArguments;

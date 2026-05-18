@@ -1,15 +1,15 @@
-package com.hmdp.service.impl;
+package com.cityaihub.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.hmdp.dto.Result;
-import com.hmdp.dto.UserDTO;
-import com.hmdp.entity.Follow;
-import com.hmdp.mapper.FollowMapper;
-import com.hmdp.service.IFollowService;
-import com.hmdp.service.IUserService;
-import com.hmdp.utils.UserHolder;
+import com.cityaihub.dto.Result;
+import com.cityaihub.dto.UserDTO;
+import com.cityaihub.entity.Follow;
+import com.cityaihub.mapper.FollowMapper;
+import com.cityaihub.service.IFollowService;
+import com.cityaihub.service.IUserService;
+import com.cityaihub.utils.UserHolder;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 

@@ -166,7 +166,7 @@ Query → Vector Search → Retrieved Docs → [Retrieval Metrics]
 
 ### Java 集成建议
 
-在 `src/main/java/com/hmdp/ai/rag/eval/` 下新增：
+在 `src/main/java/com/cityaihub/ai/rag/eval/` 下新增：
 
 ```java
 // 1. 调用 Python 评分器

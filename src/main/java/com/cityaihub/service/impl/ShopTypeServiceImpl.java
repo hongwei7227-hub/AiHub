@@ -1,8 +1,8 @@
-package com.hmdp.service.impl;
+package com.cityaihub.service.impl;
 
-import com.hmdp.entity.ShopType;
-import com.hmdp.mapper.ShopTypeMapper;
-import com.hmdp.service.IShopTypeService;
+import com.cityaihub.entity.ShopType;
+import com.cityaihub.mapper.ShopTypeMapper;
+import com.cityaihub.service.IShopTypeService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 

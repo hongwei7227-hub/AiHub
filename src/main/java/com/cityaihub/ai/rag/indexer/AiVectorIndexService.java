@@ -1,6 +1,6 @@
-package com.hmdp.ai.rag.indexer;
+package com.cityaihub.ai.rag.indexer;
 
-import com.hmdp.ai.dto.IndexRebuildResponse;
+import com.cityaihub.ai.dto.IndexRebuildResponse;
 
 public interface AiVectorIndexService {
 

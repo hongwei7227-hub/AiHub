@@ -1,10 +1,10 @@
-package com.hmdp.controller;
+package com.cityaihub.controller;
 
 
-import com.hmdp.dto.Result;
-import com.hmdp.entity.Voucher;
-import com.hmdp.service.IVoucherService;
-import com.hmdp.utils.SlidingWindowLimit;
+import com.cityaihub.dto.Result;
+import com.cityaihub.entity.Voucher;
+import com.cityaihub.service.IVoucherService;
+import com.cityaihub.utils.SlidingWindowLimit;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.annotation.Resource;

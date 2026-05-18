@@ -1,4 +1,4 @@
-package com.hmdp.event;
+package com.cityaihub.event;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

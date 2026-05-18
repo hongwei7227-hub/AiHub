@@ -1,7 +1,7 @@
-package com.hmdp.ai.rag.indexer;
+package com.cityaihub.ai.rag.indexer;
 
-import com.hmdp.ai.rag.AiMetadataConstants;
-import com.hmdp.entity.Shop;
+import com.cityaihub.ai.rag.AiMetadataConstants;
+import com.cityaihub.entity.Shop;
 import org.springframework.ai.document.Document;
 
 import java.util.HashMap;

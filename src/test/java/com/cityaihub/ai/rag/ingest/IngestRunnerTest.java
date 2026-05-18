@@ -1,4 +1,4 @@
-package com.hmdp.ai.rag.ingest;
+package com.cityaihub.ai.rag.ingest;
 
 import io.milvus.client.MilvusServiceClient;
 import io.milvus.grpc.GetCollectionStatisticsResponse;

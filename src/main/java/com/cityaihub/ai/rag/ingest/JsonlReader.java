@@ -1,4 +1,4 @@
-package com.hmdp.ai.rag.ingest;
+package com.cityaihub.ai.rag.ingest;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;

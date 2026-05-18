@@ -1,4 +1,4 @@
-package com.hmdp;
+package com.cityaihub;
 
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;

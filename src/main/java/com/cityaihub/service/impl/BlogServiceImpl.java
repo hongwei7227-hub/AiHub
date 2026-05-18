@@ -1,21 +1,21 @@
-package com.hmdp.service.impl;
+package com.cityaihub.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.hmdp.dto.Result;
-import com.hmdp.dto.ScrollResult;
-import com.hmdp.dto.UserDTO;
-import com.hmdp.entity.Blog;
-import com.hmdp.entity.Follow;
-import com.hmdp.entity.User;
-import com.hmdp.mapper.BlogMapper;
-import com.hmdp.service.IBlogService;
-import com.hmdp.service.IFollowService;
-import com.hmdp.service.IUserService;
-import com.hmdp.utils.SystemConstants;
-import com.hmdp.utils.UserHolder;
+import com.cityaihub.dto.Result;
+import com.cityaihub.dto.ScrollResult;
+import com.cityaihub.dto.UserDTO;
+import com.cityaihub.entity.Blog;
+import com.cityaihub.entity.Follow;
+import com.cityaihub.entity.User;
+import com.cityaihub.mapper.BlogMapper;
+import com.cityaihub.service.IBlogService;
+import com.cityaihub.service.IFollowService;
+import com.cityaihub.service.IUserService;
+import com.cityaihub.utils.SystemConstants;
+import com.cityaihub.utils.UserHolder;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
@@ -27,8 +27,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.hmdp.utils.RedisConstants.BLOG_LIKED_KEY;
-import static com.hmdp.utils.RedisConstants.FEED_KEY;
+import static com.cityaihub.utils.RedisConstants.BLOG_LIKED_KEY;
+import static com.cityaihub.utils.RedisConstants.FEED_KEY;
 
 /**
  * <p>

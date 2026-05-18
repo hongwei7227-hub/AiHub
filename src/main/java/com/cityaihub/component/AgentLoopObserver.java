@@ -1,7 +1,7 @@
-package com.hmdp.component;
+package com.cityaihub.component;
 
-import com.hmdp.ai.agent.loop.AgentLoopTrace;
-import com.hmdp.ai.agent.loop.ToolExecutionLog;
+import com.cityaihub.ai.agent.loop.AgentLoopTrace;
+import com.cityaihub.ai.agent.loop.ToolExecutionLog;
 
 public interface AgentLoopObserver {
 

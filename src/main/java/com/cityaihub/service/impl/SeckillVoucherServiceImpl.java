@@ -1,8 +1,8 @@
-package com.hmdp.service.impl;
+package com.cityaihub.service.impl;
 
-import com.hmdp.entity.SeckillVoucher;
-import com.hmdp.mapper.SeckillVoucherMapper;
-import com.hmdp.service.ISeckillVoucherService;
+import com.cityaihub.entity.SeckillVoucher;
+import com.cityaihub.mapper.SeckillVoucherMapper;
+import com.cityaihub.service.ISeckillVoucherService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 

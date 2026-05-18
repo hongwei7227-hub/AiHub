@@ -1,6 +1,6 @@
-package com.hmdp.ai.dto;
+package com.cityaihub.ai.dto;
 
-import com.hmdp.ai.entity.AiMessage;
+import com.cityaihub.ai.entity.AiMessage;
 import lombok.Data;
 
 import java.time.LocalDateTime;

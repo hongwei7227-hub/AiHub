@@ -1,8 +1,8 @@
-package com.hmdp.seckill;
+package com.cityaihub.seckill;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hmdp.utils.RedisConstants;
+import com.cityaihub.utils.RedisConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;

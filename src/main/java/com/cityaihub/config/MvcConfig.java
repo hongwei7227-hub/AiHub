@@ -1,7 +1,7 @@
-package com.hmdp.config;
+package com.cityaihub.config;
 
-import com.hmdp.utils.LoginInterceptor;
-import com.hmdp.utils.RefreshTokenInterceptor;
+import com.cityaihub.utils.LoginInterceptor;
+import com.cityaihub.utils.RefreshTokenInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;

@@ -1,9 +1,9 @@
-package com.hmdp.ai.service.impl;
+package com.cityaihub.ai.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.hmdp.ai.entity.AiMessage;
-import com.hmdp.ai.mapper.AiMessageMapper;
-import com.hmdp.ai.service.AiMessageService;
+import com.cityaihub.ai.entity.AiMessage;
+import com.cityaihub.ai.mapper.AiMessageMapper;
+import com.cityaihub.ai.service.AiMessageService;
 import org.springframework.stereotype.Service;
 
 @Service

@@ -1,7 +1,7 @@
-package com.hmdp.config;
+package com.cityaihub.config;
 
-import com.hmdp.dto.Result;
-import com.hmdp.utils.RateLimitExceededException;
+import com.cityaihub.dto.Result;
+import com.cityaihub.utils.RateLimitExceededException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;

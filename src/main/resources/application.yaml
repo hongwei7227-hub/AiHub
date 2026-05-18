@@ -71,17 +71,17 @@ spring:
 
 logging:
   level:
-    com.hmdp: info
+    com.cityaihub: info
 
 mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-    type-aliases-package: com.hmdp.entity
+    type-aliases-package: com.cityaihub.entity
 
 rocketmq:
   name-server: localhost:9876
   producer:
-    group: hmdp-producer-group
+    group: cityaihub-producer-group
     # Plan E 压测：默认 3000ms 在 500 并发下会超时（broker 处理不过来），调到 30s
     send-message-timeout: 30000
 

@@ -1,10 +1,10 @@
-package com.hmdp.ai.agent.loop;
+package com.cityaihub.ai.agent.loop;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hmdp.ai.agent.prompt.AgentLoopPromptProvider;
-import com.hmdp.ai.config.AiAgentProperties;
-import com.hmdp.component.AgentLoopObserver;
+import com.cityaihub.ai.agent.prompt.AgentLoopPromptProvider;
+import com.cityaihub.ai.config.AiAgentProperties;
+import com.cityaihub.component.AgentLoopObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;

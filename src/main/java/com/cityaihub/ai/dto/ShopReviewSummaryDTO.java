@@ -1,4 +1,4 @@
-package com.hmdp.ai.dto;
+package com.cityaihub.ai.dto;
 
 import lombok.Data;
 

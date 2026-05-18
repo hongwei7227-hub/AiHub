@@ -1,12 +1,12 @@
-package com.hmdp.ai.rag.eval;
+package com.cityaihub.ai.rag.eval;
 
-import com.hmdp.ai.dto.BlogVectorHitDTO;
-import com.hmdp.ai.dto.KnowledgeHitDTO;
-import com.hmdp.ai.dto.ShopToolDTO;
-import com.hmdp.ai.rag.dto.EvalQuery;
-import com.hmdp.ai.rag.retriever.AiRagRetriever;
-import com.hmdp.ai.rag.retriever.Bge3Reranker;
-import com.hmdp.ai.rag.retriever.HybridRagRetriever;
+import com.cityaihub.ai.dto.BlogVectorHitDTO;
+import com.cityaihub.ai.dto.KnowledgeHitDTO;
+import com.cityaihub.ai.dto.ShopToolDTO;
+import com.cityaihub.ai.rag.dto.EvalQuery;
+import com.cityaihub.ai.rag.retriever.AiRagRetriever;
+import com.cityaihub.ai.rag.retriever.Bge3Reranker;
+import com.cityaihub.ai.rag.retriever.HybridRagRetriever;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;

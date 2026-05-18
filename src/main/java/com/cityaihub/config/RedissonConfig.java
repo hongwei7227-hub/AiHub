@@ -1,4 +1,4 @@
-package com.hmdp.config;
+package com.cityaihub.config;
 
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;

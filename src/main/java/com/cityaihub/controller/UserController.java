@@ -1,16 +1,16 @@
-package com.hmdp.controller;
+package com.cityaihub.controller;
 
 
 import cn.hutool.core.bean.BeanUtil;
-import com.hmdp.dto.LoginFormDTO;
-import com.hmdp.dto.Result;
-import com.hmdp.dto.UserDTO;
-import com.hmdp.entity.User;
-import com.hmdp.entity.UserInfo;
-import com.hmdp.service.IUserInfoService;
-import com.hmdp.service.IUserService;
-import com.hmdp.utils.SlidingWindowLimit;
-import com.hmdp.utils.UserHolder;
+import com.cityaihub.dto.LoginFormDTO;
+import com.cityaihub.dto.Result;
+import com.cityaihub.dto.UserDTO;
+import com.cityaihub.entity.User;
+import com.cityaihub.entity.UserInfo;
+import com.cityaihub.service.IUserInfoService;
+import com.cityaihub.service.IUserService;
+import com.cityaihub.utils.SlidingWindowLimit;
+import com.cityaihub.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 

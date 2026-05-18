@@ -1,8 +1,8 @@
-package com.hmdp.service.impl;
+package com.cityaihub.service.impl;
 
-import com.hmdp.entity.BlogComments;
-import com.hmdp.mapper.BlogCommentsMapper;
-import com.hmdp.service.IBlogCommentsService;
+import com.cityaihub.entity.BlogComments;
+import com.cityaihub.mapper.BlogCommentsMapper;
+import com.cityaihub.service.IBlogCommentsService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 

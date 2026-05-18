@@ -1,10 +1,10 @@
-package com.hmdp.ai.smoke;
+package com.cityaihub.ai.smoke;
 
-import com.hmdp.ai.agent.loop.AgentLoopExecutor;
-import com.hmdp.ai.agent.loop.AgentLoopRequest;
-import com.hmdp.ai.agent.loop.AgentLoopResult;
-import com.hmdp.ai.agent.loop.AgentLoopTrace;
-import com.hmdp.ai.agent.loop.ToolExecutionLog;
+import com.cityaihub.ai.agent.loop.AgentLoopExecutor;
+import com.cityaihub.ai.agent.loop.AgentLoopRequest;
+import com.cityaihub.ai.agent.loop.AgentLoopResult;
+import com.cityaihub.ai.agent.loop.AgentLoopTrace;
+import com.cityaihub.ai.agent.loop.ToolExecutionLog;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
