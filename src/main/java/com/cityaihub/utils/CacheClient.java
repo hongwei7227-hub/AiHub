@@ -30,6 +30,11 @@ public class CacheClient {
 
     private static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
 
+    // PLAN-001: 分层命中率埋点 (压测用, 生产环境不影响业务)
+    private final java.util.concurrent.atomic.AtomicLong l1HitCount = new java.util.concurrent.atomic.AtomicLong();
+    private final java.util.concurrent.atomic.AtomicLong l2HitCount = new java.util.concurrent.atomic.AtomicLong();
+    private final java.util.concurrent.atomic.AtomicLong dbHitCount = new java.util.concurrent.atomic.AtomicLong();
+
     public CacheClient(StringRedisTemplate stringRedisTemplate, Cache<String, Object> caffeineCache) {
         this.stringRedisTemplate = stringRedisTemplate;
         this.caffeineCache = caffeineCache;
@@ -160,6 +165,7 @@ public class CacheClient {
         if (enableCaffeineCache) {
             Object cached = caffeineCache.getIfPresent(key);
             if (cached != null) {
+                l1HitCount.incrementAndGet();   // PLAN-001: L1 命中埋点
                 if (cached instanceof String s && s.isEmpty()) return null;
                 return (R) cached;
             }
@@ -168,6 +174,7 @@ public class CacheClient {
         String shopJson = stringRedisTemplate.opsForValue().get(key);
         // 2.判断是否存在
         if (StrUtil.isNotBlank(shopJson)) {
+            l2HitCount.incrementAndGet();       // PLAN-001: L2 命中埋点
             // 3.存在，回写 Caffeine 后返回
             R r = JSONUtil.toBean(shopJson, type);
             if (enableCaffeineCache) caffeineCache.put(key, r);
@@ -203,11 +210,23 @@ public class CacheClient {
                 stringRedisTemplate.opsForValue().set(key, "", CACHE_NULL_TTL, TimeUnit.MINUTES);
                 return null;
             }
+            dbHitCount.incrementAndGet();       // PLAN-001: DB 命中埋点
             // 5.存在，写入两层缓存
             this.set(key, r, time, unit);
         } finally {
             lock.unlock();
         }
         return r;
+    }
+
+    // PLAN-001: 分层命中率埋点 getter (压测用)
+    public long getL1HitCount() { return l1HitCount.get(); }
+    public long getL2HitCount() { return l2HitCount.get(); }
+    public long getDbHitCount() { return dbHitCount.get(); }
+
+    public void resetHitCounters() {
+        l1HitCount.set(0);
+        l2HitCount.set(0);
+        dbHitCount.set(0);
     }
 }

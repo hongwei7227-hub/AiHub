@@ -26,7 +26,7 @@ spring:
       # Plan G+: chat 切到小米 MiMo 平台（OpenAI 兼容 + 国内直连 + 真 tool calling 支持，1.2s 响应）
       # 反代不支持 tool calling（验证过 composer-2-fast/sonnet-4.5/kimi-k2.5/gpt-5.4 全失败），SF Clash HTTP/2 timeout，唯一可行的就是 MiMo
       base-url: ${SPRING_AI_OPENAI_BASE_URL:https://token-plan-cn.xiaomimimo.com}
-      api-key: ${SPRING_AI_OPENAI_API_KEY:***REMOVED_MIMO_KEY***}
+      api-key: ${SPRING_AI_OPENAI_API_KEY:}
       chat:
         options:
           model: ${SPRING_AI_OPENAI_CHAT_MODEL:mimo-v2.5}
@@ -34,7 +34,7 @@ spring:
       embedding:
         # embedding 仍走 SiliconFlow（MiMo 不提供 embedding API），需要单独 api-key 否则会继承 chat 的 MiMo key 导致 401
         base-url: ${SPRING_AI_OPENAI_EMBEDDING_BASE_URL:https://api.siliconflow.cn}
-        api-key: ${SPRING_AI_OPENAI_EMBEDDING_API_KEY:***REMOVED_SILICONFLOW_KEY***}
+        api-key: ${SPRING_AI_OPENAI_EMBEDDING_API_KEY:}
         options:
           model: ${SPRING_AI_OPENAI_EMBEDDING_MODEL:BAAI/bge-m3}
     vectorstore:
@@ -214,7 +214,7 @@ rag:
     # SiliconFlow rerank 端点（OpenAI / Cohere-style schema：POST /v1/rerank）
     base-url: ${RAG_RERANK_BASE_URL:https://api.siliconflow.cn}
     # 业务 chat 已切到 cursor 反代(spring.ai.openai.api-key=dummy)，rerank 仍需真实 SiliconFlow key
-    api-key: ${RAG_RERANK_API_KEY:***REMOVED_SILICONFLOW_KEY***}
+    api-key: ${RAG_RERANK_API_KEY:}
     model: ${RAG_RERANK_MODEL:BAAI/bge-reranker-v2-m3}
     # 业务路径单次调用 3 秒兜底（worst case = 3s + 200ms + 3s = 6.2s 而非 15s）
     timeout-ms: ${RAG_RERANK_TIMEOUT_MS:3000}

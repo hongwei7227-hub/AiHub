@@ -38,6 +38,13 @@ src/main/resources/application-local.yaml
 *.pem
 secrets/
 
+### 个人隐私 / 简历（绝不进 git）###
+docs/简历信息/
+
+### 临时历史改写脚本 ###
+.msg-filter.sh
+.msg-rewrite-map.tsv
+
 ### Python (rag-eval-py) ###
 __pycache__/
 *.pyc

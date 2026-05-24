@@ -143,6 +143,14 @@
             <artifactId>lucene-analysis-smartcn</artifactId>
             <version>9.11.1</version>
         </dependency>
+
+        <!-- PLAN-001: Zipfian 长尾压测用 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math3</artifactId>
+            <version>3.6.1</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     
     <dependencyManagement>
