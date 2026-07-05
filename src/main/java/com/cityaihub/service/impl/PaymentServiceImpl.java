@@ -5,10 +5,11 @@ import com.cityaihub.dto.UserDTO;
 import com.cityaihub.entity.VoucherOrder;
 import com.cityaihub.service.IPaymentService;
 import com.cityaihub.service.IVoucherOrderService;
-import com.cityaihub.utils.SimpleRedisLock;
 import com.cityaihub.utils.UserHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -16,7 +17,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
-import static com.cityaihub.utils.RedisConstants.ORDER_PAYMENT_LOCK_PREFIX;
+import static com.cityaihub.utils.RedisConstants.ORDER_STATE_LOCK_PREFIX;
 import static com.cityaihub.utils.RedisConstants.SECKILL_ORDER_PENDING_KEY;
 
 @Slf4j
@@ -26,6 +27,7 @@ public class PaymentServiceImpl implements IPaymentService {
 
     private final IVoucherOrderService voucherOrderService;
     private final StringRedisTemplate stringRedisTemplate;
+    private final RedissonClient redissonClient;
 
     @Override
     public Result createPayment(Long orderId, Integer payType) {
@@ -63,12 +65,19 @@ public class PaymentServiceImpl implements IPaymentService {
     }
 
     private Result handlePaymentCallback(Long orderId) {
-        String lockKey = ORDER_PAYMENT_LOCK_PREFIX + orderId;
-        SimpleRedisLock lock = new SimpleRedisLock(lockKey, stringRedisTemplate);
+        // 与"超时关单"链路共用同一把锁 ORDER_STATE_LOCK_PREFIX + orderId，两条链路对同一订单互斥串行。
+        RLock lock = redissonClient.getLock(ORDER_STATE_LOCK_PREFIX + orderId);
 
-        boolean isLock = lock.tryLock(0, 5, TimeUnit.SECONDS);
+        boolean isLock;
+        try {
+            isLock = lock.tryLock(0, 5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("获取订单状态锁被中断，订单ID={}", orderId);
+            return Result.fail("订单处理中，请稍后重试");
+        }
         if (!isLock) {
-            log.warn("获取订单支付锁失败，订单ID={}", orderId);
+            log.warn("获取订单状态锁失败，订单ID={}", orderId);
             return Result.fail("订单处理中，请稍后重试");
         }
 
@@ -103,7 +112,9 @@ public class PaymentServiceImpl implements IPaymentService {
             log.error("支付回调处理异常，订单ID={}", orderId, e);
             return Result.fail("支付回调处理失败");
         } finally {
-            lock.unlock();
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
     }
 

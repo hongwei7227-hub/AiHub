@@ -2,19 +2,19 @@ package com.cityaihub.mq;
 
 import com.cityaihub.config.RocketMQConstants;
 import com.cityaihub.service.IVoucherOrderService;
-import com.cityaihub.utils.SimpleRedisLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.annotation.ConsumeMode;
 import org.apache.rocketmq.spring.annotation.MessageModel;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
 
-import static com.cityaihub.utils.RedisConstants.ORDER_TIMEOUT_LOCK_PREFIX;
+import static com.cityaihub.utils.RedisConstants.ORDER_STATE_LOCK_PREFIX;
 
 @Slf4j
 @Component
@@ -29,30 +29,32 @@ import static com.cityaihub.utils.RedisConstants.ORDER_TIMEOUT_LOCK_PREFIX;
 public class OrderTimeoutListener implements RocketMQListener<String> {
 
     private final IVoucherOrderService voucherOrderService;
-    private final StringRedisTemplate stringRedisTemplate;
+    private final RedissonClient redissonClient;
 
     @Override
     public void onMessage(String orderIdStr) {
         log.info("收到订单超时消息：订单ID={}", orderIdStr);
-        
+
         try {
             Long orderId = Long.parseLong(orderIdStr);
-            
-            String lockKey = ORDER_TIMEOUT_LOCK_PREFIX + orderId;
-            SimpleRedisLock lock = new SimpleRedisLock(lockKey, stringRedisTemplate);
-            
+
+            // 与"支付回调"链路共用同一把锁 ORDER_STATE_LOCK_PREFIX + orderId，两条链路对同一订单互斥串行。
+            RLock lock = redissonClient.getLock(ORDER_STATE_LOCK_PREFIX + orderId);
+
             boolean isLock = lock.tryLock(0, 5, TimeUnit.SECONDS);
             if (!isLock) {
-                log.warn("获取订单超时处理锁失败，订单ID={}", orderId);
+                log.warn("获取订单状态锁失败，订单ID={}", orderId);
                 return;
             }
-            
+
             try {
                 voucherOrderService.closeTimeoutOrder(orderId);
             } finally {
-                lock.unlock();
+                if (lock.isHeldByCurrentThread()) {
+                    lock.unlock();
+                }
             }
-            
+
         } catch (Exception e) {
             log.error("订单超时处理异常，订单ID={}", orderIdStr, e);
             throw new IllegalStateException("订单超时处理失败，订单ID=" + orderIdStr, e);

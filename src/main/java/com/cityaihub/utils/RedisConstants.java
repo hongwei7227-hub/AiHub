@@ -25,4 +25,8 @@ public class RedisConstants {
 
     public static final String ORDER_PAYMENT_LOCK_PREFIX = "lock:order:payment:";
     public static final String ORDER_TIMEOUT_LOCK_PREFIX = "lock:order:timeout:";
+
+    // 订单状态机锁：超时关单 / 支付回调 两条链路共用同一把锁，保证对同一订单串行处理。
+    // 这才是"防止两条链路重复处理"的关键——两条链路必须争抢同一个 key 才能互斥。
+    public static final String ORDER_STATE_LOCK_PREFIX = "lock:order:state:";
 }
